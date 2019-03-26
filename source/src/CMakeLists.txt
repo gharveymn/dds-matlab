@@ -5,7 +5,7 @@ INCLUDE_DIRECTORIES(${MATLAB_INCLUDE_DIR} headers)
 
 SET(SOURCE_FILES	headers/directxtex.h headers/directxtex.inl
 				headers/dxgitypedefs.h
-		dds.cpp
+				headers/dds.h   dds.cpp
 				mlerrorutils.cpp headers/mlerrorutils.h)
 
 ADD_EXECUTABLE(ddsread ${SOURCE_FILES})
