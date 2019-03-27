@@ -1,9 +1,10 @@
 classdef DdsImage
     
+	% DirectXTex Image properties
+	
 	properties (GetAccess = public, SetAccess = protected)
 		Width
 		Height
-		Format
 		RowPitch
 		SlicePitch
 		Pixels
@@ -11,6 +12,12 @@ classdef DdsImage
 	
 	properties (Access = protected)
 		FormatID
+	end
+	
+	% Custom interfacing properties
+	
+	properties (GetAccess = public, SetAccess = protected)
+		Format
 	end
 	
 	methods
@@ -33,23 +40,25 @@ classdef DdsImage
 			end
 		end
 		
-		function img = GetImage(obj, varargin)
-			if(nargin == 2)
-				mipidx = varargin{1};
+		function newobj = convert(obj, newfmt, filter, threshold)
+			
+			imgpack = {obj.Width, ...
+					 obj.Height, ...
+					 obj.FormatID, ...
+					 obj.RowPitch, ...
+					 obj.SlicePitch, ...
+					 obj.Pixels};
+			
+			if(nargin > 2)
+				if(nargin > 3)
+					newimg = ddsio('CONVERT', imgpack, newfmt, filter, threshold);
+				else
+					newimg = ddsio('CONVERT', imgpack, newfmt, filter);
+				end
 			else
-				mipidx = 1;
+				newimg = ddsio('CONVERT', imgpack, newfmt);
 			end
-			
-			if(nargin == 3)
-				arrayidx = varargin{2};
-			else
-				arrayidx = 1;
-			end
-			
-			mip = obj.GetMip(mipidx, arrayidx);
-			
-			% convert to srgb
-			
+			newobj = DdsImage(newimg);
 		end
 		
 	end

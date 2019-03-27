@@ -2,7 +2,7 @@
 #include "mlerrorutils.h"
 #include "directxtex.h"
 #include "directxtex.inl"
-#include "dds.h"
+#include "ddsio.h"
 
 template <class T>
 static void dds_SetScalarField(mxArray* mx_struct, mwIndex idx, const char* field, mxClassID classid, T data)
@@ -51,58 +51,37 @@ static DWORD dds_ParseFlags(const mxArray* flags_array)
 	mwIndex i;
 	mxArray* curr_flag;
 	DWORD flags = 0;
+	
+	if(!mxIsCell(flags_array))
+	{
+		meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputError", "Flags must be contained by a cell array.");
+	}
 	mwSize num_flags = mxGetNumberOfElements(flags_array);
 	for(i = 0; i < num_flags; i++)
 	{
 		curr_flag = mxGetCell(flags_array, i);
-		if(dds_CompareString(curr_flag, "None"))
+		if(!mxIsChar(curr_flag))
 		{
-			flags |= DirectX::DDS_FLAGS_NONE;
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputError", "Flags must be of type 'char'.");
 		}
-		else if(dds_CompareString(curr_flag, "LegacyDWord"))
+		char* flagname = mxArrayToString(curr_flag);
+		auto found = ctrlflag_map.find(flagname);
+		if(found != ctrlflag_map.s_end())
 		{
-			flags |= DirectX::DDS_FLAGS_LEGACY_DWORD;
-		}
-		else if(dds_CompareString(curr_flag, "NoLegacyExpansion"))
-		{
-			flags |= DirectX::DDS_FLAGS_NO_LEGACY_EXPANSION;
-		}
-		else if(dds_CompareString(curr_flag, "NoR10B10G10A2FixUp"))
-		{
-			flags |= DirectX::DDS_FLAGS_NO_R10B10G10A2_FIXUP;
-		}
-		else if(dds_CompareString(curr_flag, "ForceRGB"))
-		{
-			flags |= DirectX::DDS_FLAGS_FORCE_RGB;
-		}
-		else if(dds_CompareString(curr_flag, "No16BPP"))
-		{
-			flags |= DirectX::DDS_FLAGS_NO_16BPP;
-		}
-		else if(dds_CompareString(curr_flag, "ExpandLuminance"))
-		{
-			flags |= DirectX::DDS_FLAGS_EXPAND_LUMINANCE;
-		}
-		else if(dds_CompareString(curr_flag, "BadDXTNTails"))
-		{
-			flags |= DirectX::DDS_FLAGS_BAD_DXTN_TAILS;
-		}
-		else if(dds_CompareString(curr_flag, "ForceDX10Ext"))
-		{
-			flags |= DirectX::DDS_FLAGS_FORCE_DX10_EXT;
-		}
-		else if(dds_CompareString(curr_flag, "ForceDX10ExtMisc2"))
-		{
-			flags |= DirectX::DDS_FLAGS_FORCE_DX10_EXT_MISC2;
+			flags |= found->second;
 		}
 		else
 		{
-			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER | MEU_SEVERITY_INTERNAL, "UnexpectedFlagError",
-			"An unexpected flag was encountered during input parsing. Please use the provided entry function.");
+			mxFree(flagname);
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "UnexpectedFlagError",
+			                  "An unexpected flag was encountered during input parsing.");
 		}
+		mxFree(flagname);
 	}
 	return flags;
 }
+
+
 
 static mxArray* dds_ExtractMetadata(DirectX::TexMetadata metadata)
 {
@@ -123,18 +102,51 @@ static mxArray* dds_ExtractMetadata(DirectX::TexMetadata metadata)
 
 static void dds_ConstructImage(const mxArray* mx_image, DirectX::Image& image)
 {
-	image.width      = *(uint64_T*)mxGetData(mxGetField(mx_image, 0, "Width"));
-	image.height     = *(uint64_T*)mxGetData(mxGetField(mx_image, 0, "Height"));
-	image.format     =  (DXGI_FORMAT)*(uint8_T*)mxGetData(mxGetField(mx_image, 0, "FormatID"));
-	image.rowPitch   = *(uint64_T*)mxGetData(mxGetField(mx_image, 0, "RowPitch"));
-	image.slicePitch = *(uint64_T*)mxGetData(mxGetField(mx_image, 0, "SlicePitch"));
-	image.pixels     =  (uint8_t*)mxGetData(mxGetField(mx_image, 0, "pixels"));
+	image.width      = *(uint64_T*)mxGetData(mxGetCell(mx_image, 0));
+	image.height     = *(uint64_T*)mxGetData(mxGetCell(mx_image, 1));
+	image.format     =  (DXGI_FORMAT)*(uint8_T*)mxGetData(mxGetCell(mx_image, 2));
+	image.rowPitch   = *(uint64_T*)mxGetData(mxGetCell(mx_image, 3));
+	image.slicePitch = *(uint64_T*)mxGetData(mxGetCell(mx_image, 4));
+	image.pixels     =  (uint8_t*)mxGetData(mxGetCell(mx_image, 5));
 }
+
+/*
+static mxArray* dds_RowToColumn(uint8_t* src, size_t width, size_t height, size_t pixel_pitch)
+{
+	size_t src_idx, dst_idx;
+	size_t row_pitch = width;
+	size_t col_pitch = height * pixel_pitch;
+	size_t num_pixels = width * height;
+	mxArray* ret = mxCreateNumericMatrix(col_pitch, row_pitch, mxUINT8_CLASS, mxREAL);
+	auto dst = (uint8_t*)mxGetData(ret);
+	for(src_idx = 0; src_idx < num_pixels; src_idx++)
+	{
+		dst_idx = (src_idx % width) * height + src_idx / width;
+		memcpy(dst + dst_idx*pixel_pitch, src + src_idx*pixel_pitch, pixel_pitch);
+	}
+	return ret;
+}
+
+static mxArray* dds_RowToColumn2(uint8_t* src, size_t row_pitch, size_t slice_pitch, size_t bpp)
+{
+	size_t src_idx, dst_idx;
+	size_t new_row_pitch = row_pitch / pixel_pitch;
+	size_t new_col_pitch = (slice_pitch / row_pitch) * pixel_pitch;
+	mxArray* ret = mxCreateNumericMatrix(new_col_pitch, new_row_pitch, mxUINT8_CLASS, mxREAL);
+	auto dst = (uint8_t*)mxGetData(ret);
+	for(src_idx = 0; src_idx < slice_pitch; src_idx += pixel_pitch)
+	{
+		dst_idx = (src_idx % row_pitch) * new_col_pitch + src_idx / row_pitch;
+		memcpy(dst + dst_idx, src + src_idx, pixel_pitch);
+	}
+	return ret;
+}
+*/
 
 static mxArray* dds_ExtractImages(const DirectX::Image* images, size_t array_size, size_t mip_levels)
 {
-	mwIndex i;
 	mxArray* tmp;
+	mwIndex i;
 	const char* fieldnames[] = {"Width", "Height", "Format", "RowPitch", "SlicePitch", "Pixels", "FormatID"};
 	mxArray* mx_images = mxCreateStructMatrix(array_size, mip_levels, 7, fieldnames);
 	mwSize num_images = array_size * mip_levels;
@@ -145,8 +157,10 @@ static mxArray* dds_ExtractImages(const DirectX::Image* images, size_t array_siz
 		mxSetField(mx_images, i, "Format", mxCreateString(format_map[images[i].format].c_str()));
 		dds_SetScalarField(mx_images, i, "RowPitch", mxUINT64_CLASS, images[i].rowPitch);
 		dds_SetScalarField(mx_images, i, "SlicePitch", mxUINT64_CLASS, images[i].slicePitch);
-		tmp = mxCreateNumericMatrix(images[i].rowPitch, images[i].slicePitch / images[i].rowPitch, mxUINT8_CLASS, mxREAL);
-		memcpy(mxGetData(tmp), images[i].pixels, images[i].slicePitch * sizeof(uint8_t));
+		// mxSetField(mx_images, i, "Pixels", dds_RowToColumn(images[i].pixels, images[i].width, images[i].height, images[i].rowPitch / images[i].width));
+		// mxSetField(mx_images, i, "Pixels", dds_RowToColumn2(images[i].pixels, images[i].rowPitch, images[i].slicePitch, images[i].rowPitch / images[i].width));
+		tmp = mxCreateNumericMatrix(images[i].slicePitch, 1, mxUINT8_CLASS, mxREAL);
+		memcpy(mxGetData(tmp), images[i].pixels, images[i].slicePitch * sizeof(uint8_T));
 		mxSetField(mx_images, i, "Pixels", tmp);
 		dds_SetScalarField(mx_images, 0, "FormatID", mxUINT8_CLASS, images[i].format);
 	}
@@ -223,21 +237,106 @@ void dds_ReadMetadata(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]
 	
 }
 
+static DWORD dds_ParseFilter(const mxArray* filter_flag_array)
+{
+	mwIndex i;
+	mxArray* curr_flag;
+	DWORD filter_flags = 0;
+	
+	if(!mxIsCell(filter_flag_array))
+	{
+		meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputError", "Flags must be contained by a cell array.");
+	}
+	mwSize num_flags = mxGetNumberOfElements(filter_flag_array);
+	for(i = 0; i < num_flags; i++)
+	{
+		curr_flag = mxGetCell(filter_flag_array, i);
+		if(!mxIsChar(curr_flag))
+		{
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputError", "Flags must be of class 'char'.");
+		}
+		char* flagname = mxArrayToString(curr_flag);
+		auto found = ctrlflag_map.find(flagname);
+		if(found != ctrlflag_map.s_end())
+		{
+			filter_flags |= found->second;
+		}
+		else
+		{
+			mxFree(flagname);
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "UnexpectedFlagError",
+			                  "An unexpected flag was encountered during input parsing.");
+		}
+		mxFree(flagname);
+	}
+	return filter_flags;
+}
+
+static DXGI_FORMAT dds_ParseFormat(const mxArray* mx_fmt)
+{
+	DXGI_FORMAT fmt;
+	if(!mxIsChar(mx_fmt))
+	{
+		meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "FormatParsingError", "Format input must be of class 'char'.");
+	}
+	char* fmtname = mxArrayToString(mx_fmt);
+	auto found = format_map.find(fmtname);
+	if(found != format_map.s_end())
+	{
+		fmt = (DXGI_FORMAT)found->second;
+	}
+	else
+	{
+		mxFree(fmtname);
+		meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "UnexpectedFlagError",
+		                  "An unexpected flag was encountered during input parsing.");
+	}
+	mxFree(fmtname);
+	return fmt;
+}
+
 static void dds_Convert(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 {
-
+	HRESULT hr;
+	DirectX::Image src_img = {};
+	DirectX::ScratchImage conv;
+	DWORD filter = DirectX::TEX_FILTER_DEFAULT;
+	float threshold = DirectX::TEX_THRESHOLD_DEFAULT;
+	if(nrhs < 2)
+	{
+		meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughInputsError", "Not enough arguments. Please supply a file name.");
+	}
+	else if(nrhs > 4)
+	{
+		meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyInputsError", "Too many arguments.");
+	}
+	
+	dds_ConstructImage(prhs[0], src_img);
+	DXGI_FORMAT fmt = dds_ParseFormat(prhs[1]);
+	
+	if(nrhs > 2)
+	{
+		filter = dds_ParseFilter(prhs[2]);
+	}
+	
+	if(nrhs > 3)
+	{
+		threshold = (float)mxGetScalar(prhs[3]);
+	}
+	
+	hr = DirectX::Convert(src_img, fmt, filter, threshold, conv);
+	if(FAILED(hr))
+	{
+		meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_SYSTEM, "ConversionError", "There was an error converting the image.");
+	}
+	DirectX::TexMetadata conv_meta = conv.GetMetadata();
+	plhs[0] = dds_ExtractImages(conv.GetImages(), conv_meta.arraySize, conv_meta.mipLevels);
+	
 }
 
 /* The gateway function. */
 void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 {
-//	BiMap<size_t, std::string> control_flags;
-//	control_flags.insert(DXGI_FORMAT_R32G32B32A32_TYPELESS, "R32G32B32A32_TYPELESS");
-	
-	BiMap<size_t, std::string> control_flags {{DXGI_FORMAT_R32G32B32A32_TYPELESS, "R32G32B32A32_TYPELESS"}};
-
-	mexPrintf("%s\n", control_flags[DXGI_FORMAT_R32G32B32A32_TYPELESS].c_str());
-	mexPrintf("%llu\n", control_flags["R32G32B32A32_TYPELESS"]);
 	
 	void (*op_func)(int,mxArray*[],int,const mxArray*[]) = nullptr;
 	
@@ -248,6 +347,11 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughInputsError", "Not enough arguments. Please supply a directive.");
 	}
 	
+	if(!mxIsChar(prhs[0]))
+	{
+		meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidDirectiveError", "The directive supplied must be of class 'char'.");
+	}
+	
 	if(dds_CompareString(prhs[0], "READ"))
 	{
 		op_func = dds_Read;
@@ -255,6 +359,10 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	else if(dds_CompareString(prhs[0],"READ_METADATA"))
 	{
 		op_func = dds_ReadMetadata;
+	}
+	else if(dds_CompareString(prhs[0],"CONVERT"))
+	{
+		op_func = dds_Convert;
 	}
 	else
 	{

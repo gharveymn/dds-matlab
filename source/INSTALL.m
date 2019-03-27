@@ -1,5 +1,5 @@
 function INSTALL
-%% INSTALL  Run this file to compile <strong>ddsread</strong>.
+%% INSTALL  Run this file to compile <strong>ddsio</strong>.
 %    The output is written to '../out/private'.
 %
 %    Thanks for downloading!
@@ -20,7 +20,7 @@ function INSTALL
 	end
 	
 	sources = {
-		'dds.cpp',...
+		'ddsio.cpp',...
 		'mlerrorutils.cpp'
 		};
 
@@ -42,7 +42,7 @@ function INSTALL
 % 		mexflags = [mexflags {'-compatibleArrayDims'}];
 % 	end
 
-	fprintf('-Compiling dds...')
+	fprintf('-Compiling ddsio...')
 	% mexflags = [mexflags {'COMPFLAGS="$COMPFLAGS /O2"'}];
 	% mexflags = [mexflags {'CFLAGS="$CFLAGS -Wall -Werror -Wno-unused-function"'}];
 	mex(mexflags{:} , sources{:})
