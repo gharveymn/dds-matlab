@@ -5,23 +5,19 @@ classdef DdsImage
 	properties (GetAccess = public, SetAccess = protected)
 		Width
 		Height
+		Depth
 		RowPitch
 		SlicePitch
 		Pixels
 	end
 	
+	% This should be given by Dds handler
 	properties (Access = protected)
 		FormatID
 	end
 	
-	% Custom interfacing properties
-	
-	properties (GetAccess = public, SetAccess = protected)
-		Format
-	end
-	
 	methods
-		function obj = DdsImage(images)
+		function obj = DdsImage(images, formatid)
 			if(nargin > 0)
 				m = size(images,1);
 				n = size(images,2);
@@ -30,35 +26,42 @@ classdef DdsImage
 					for j = 1:n
 						obj(i,j).Width = images(i,j).Width;
 						obj(i,j).Height = images(i,j).Height;
-						obj(i,j).Format = images(i,j).Format;
+						obj(i,j).Depth    = images(i,j).Depth;
+						obj(i,j).FormatID = formatid;
 						obj(i,j).RowPitch = images(i,j).RowPitch;
 						obj(i,j).SlicePitch = images(i,j).SlicePitch;
 						obj(i,j).Pixels = images(i,j).Pixels;
-						obj(i,j).FormatID = images(i,j).FormatID;
 					end
 				end
 			end
 		end
 		
-		function newobj = convert(obj, newfmt, filter, threshold)
-			
-			imgpack = {obj.Width, ...
-					 obj.Height, ...
-					 obj.FormatID, ...
-					 obj.RowPitch, ...
-					 obj.SlicePitch, ...
-					 obj.Pixels};
-			
-			if(nargin > 2)
-				if(nargin > 3)
-					newimg = ddsio('CONVERT', imgpack, newfmt, filter, threshold);
-				else
-					newimg = ddsio('CONVERT', imgpack, newfmt, filter);
+		function newdds = convert(obj, varargin)
+			newdds = Dds(ddsio('CONVERT', struct(obj), varargin{:}));
+		end
+		
+		function newdds = flip(obj, flags)
+			newdds = Dds(ddsio('FLIPROTATE',struct(obj), flags));
+		end
+		
+		function newdds = rotate(obj, flags)
+			newdds = Dds(ddsio('FLIPROTATE',struct(obj), flags));
+		end
+		
+		function s = struct(obj)
+			m = size(obj,1);
+			n = size(obj,2);
+			for i = m:-1:1
+				for j = n:-1:1
+					s(i,j) = struct('Width',      obj(i,j).Width, ...
+								 'Height',     obj(i,j).Height, ...
+								 'Depth',      obj(i,j).Depth, ...
+								 'FormatID',   obj(i,j).FormatID, ...
+								 'RowPitch',   obj(i,j).RowPitch, ...
+								 'SlicePitch', obj(i,j).SlicePitch, ...
+								 'Pixels',     obj(i,j).Pixels);
 				end
-			else
-				newimg = ddsio('CONVERT', imgpack, newfmt);
-			end
-			newobj = DdsImage(newimg);
+			end	
 		end
 		
 	end

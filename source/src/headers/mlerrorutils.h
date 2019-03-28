@@ -16,6 +16,7 @@
 #  endif
 #  include <Windows.h>
    typedef DWORD errcode_T;
+   extern HRESULT hres;
 #else
    typedef int errcode_T;
 #  if(((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE) || defined(__APPLE__))
@@ -33,6 +34,7 @@
 #define MEU_SEVERITY_CORRUPTION  1u << 3u
 #define MEU_SEVERITY_FATAL       1u << 4u
 #define MEU_ERRNO                1u << 5u
+#define MEU_SEVERITY_HRESULT     1u << 6u
 
 #define MEU_FL __FILE__, __LINE__
 

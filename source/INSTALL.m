@@ -43,7 +43,7 @@ function INSTALL
 % 	end
 
 	fprintf('-Compiling ddsio...')
-	% mexflags = [mexflags {'COMPFLAGS="$COMPFLAGS /O2"'}];
+	mexflags = [mexflags {'COMPFLAGS="$COMPFLAGS -Wall"'}];
 	% mexflags = [mexflags {'CFLAGS="$CFLAGS -Wall -Werror -Wno-unused-function"'}];
 	mex(mexflags{:} , sources{:})
 	fprintf(' successful.\n')

@@ -9,6 +9,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "mex.h"
+#include "mlerrorutils.h"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -17,6 +18,8 @@
 
 #ifndef _WIN32
 #  include <string.h>
+#else
+HRESULT hres = 0;
 #endif
 
 #include "mlerrorutils.h"
@@ -66,7 +69,7 @@ static void meu_WriteSystemErrorString(char* buffer, unsigned int error_severity
 static const char* meu_library_name = "";
 
 static void (*meu_error_callback)(unsigned int) = nullptr;
-static void (*meu_warning_callback)(void) = nullptr;
+static void (*meu_warning_callback)() = nullptr;
 
 static const char* meu_error_help_message = "";
 static const char* meu_warning_help_message = "";
@@ -82,7 +85,7 @@ void meu_PrintMexError(const char* file_name, int line, unsigned int error_sever
 	char id_buffer[MEU_ID_BUFFER_SIZE] = {0};
 	char system_error_string_buffer[MEU_SYSTEM_ERROR_STRING_SIZE] = {0};
 	
-	if(error_severity & MEU_SEVERITY_SYSTEM)
+	if(error_severity & (MEU_SEVERITY_SYSTEM|MEU_SEVERITY_HRESULT))
 	{
 		meu_WriteSystemErrorString(system_error_string_buffer, error_severity);
 	}
@@ -151,7 +154,7 @@ void meu_SetErrorCallback(void (*callback_function)(unsigned int))
 }
 
 
-void meu_SetWarningCallback(void (*callback_function)(void))
+void meu_SetWarningCallback(void (*callback_function)())
 {
 	meu_warning_callback = callback_function;
 }
@@ -207,6 +210,13 @@ static void meu_WriteSystemErrorString(char* buffer, unsigned int error_severity
 		inner_buffer += strlen(buffer);
 		
 		strerror_s(inner_buffer, MEU_SYSTEM_ERROR_STRING_SIZE, errno);
+	}
+	else if(error_severity & MEU_SEVERITY_HRESULT)
+	{
+		sprintf(buffer, "System error code 0x%lX: ", hres);
+		inner_buffer += strlen(buffer);
+		
+		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, (DWORD)hres, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), inner_buffer, MEU_SYSTEM_ERROR_STRING_SIZE, nullptr);
 	}
 	else
 	{
