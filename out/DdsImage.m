@@ -36,16 +36,33 @@ classdef DdsImage
 			end
 		end
 		
+		function imshow(obj)
+			imshow(toimage(obj));
+		end
+		
+		function varargout = toimage(obj)
+			nout = max(nargout,1);
+			[varargout{1:nout}] = ddsio('IMAGE_MATRIX', struct(obj));
+		end
+		
 		function newdds = convert(obj, varargin)
 			newdds = Dds(ddsio('CONVERT', struct(obj), varargin{:}));
 		end
 		
 		function newdds = flip(obj, flags)
-			newdds = Dds(ddsio('FLIPROTATE',struct(obj), flags));
+			newdds = Dds(ddsio('FLIP_ROTATE', struct(obj), flags));
 		end
 		
 		function newdds = rotate(obj, flags)
-			newdds = Dds(ddsio('FLIPROTATE',struct(obj), flags));
+			newdds = Dds(ddsio('FLIP_ROTATE', struct(obj), flags));
+		end
+		
+		function newdds = decompress(obj,fmt)
+			if(nargin == 2)
+				newdds = Dds(ddsio('DECOMPRESS', struct(obj), fmt));
+			else
+				newdds = Dds(ddsio('DECOMPRESS', struct(obj)));
+			end
 		end
 		
 		function s = struct(obj)

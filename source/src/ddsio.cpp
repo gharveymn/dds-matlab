@@ -170,8 +170,8 @@ namespace ddsml
 	
 	static mxArray* ExtractMetadata(DirectX::TexMetadata metadata)
 	{
-		const char* fieldnames[] = {"Width", "Height", "Depth", "ArraySize", "MipLevels", "MiscFlags", "MiscFlags2", "Format", "Dimension"};
-		mxArray* mx_metadata = mxCreateStructMatrix(1, 1, 9, fieldnames);
+		const char* fieldnames[] = {"Width", "Height", "Depth", "ArraySize", "MipLevels", "MiscFlags", "MiscFlags2", "Format", "Dimension", "IsCubeMap", "IsPMAlpha", "IsVolumeMap"};
+		mxArray* mx_metadata = mxCreateStructMatrix(1, 1, 12, fieldnames);
 		SetScalarField(mx_metadata, 0, "Width", mxUINT64_CLASS, metadata.width);
 		SetScalarField(mx_metadata, 0, "Height", mxUINT64_CLASS, metadata.height);
 		SetScalarField(mx_metadata, 0, "Depth", mxUINT64_CLASS, metadata.depth);
@@ -181,6 +181,9 @@ namespace ddsml
 		SetScalarField(mx_metadata, 0, "MiscFlags2", mxUINT32_CLASS, metadata.miscFlags2);
 		mxSetField(mx_metadata, 0, "Format", ExtractFormat(metadata.format));
 		SetScalarField(mx_metadata, 0, "Dimension", mxUINT8_CLASS, metadata.dimension - 1);
+		mxSetField(mx_metadata, 0, "IsCubeMap", mxCreateLogicalScalar(metadata.IsCubemap()));
+		mxSetField(mx_metadata, 0, "IsPMAlpha", mxCreateLogicalScalar(metadata.IsPMAlpha()));
+		mxSetField(mx_metadata, 0, "IsVolumeMap", mxCreateLogicalScalar(metadata.IsVolumemap()));
 		return mx_metadata;
 	}
 	
@@ -502,7 +505,6 @@ static mxArray* RowToColumn2(uint8_t* src, size_t row_pitch, size_t slice_pitch,
 	}
 	
 	
-	
 	static void FlipRotateImage(int nlhs, mxArray** plhs, int nrhs, const mxArray** prhs)
 	{
 		size_t i, num_imgs;
@@ -586,6 +588,292 @@ static mxArray* RowToColumn2(uint8_t* src, size_t row_pitch, size_t slice_pitch,
 		
 	}
 	
+	static void DecompressImage(int nlhs, mxArray** plhs, int nrhs, const mxArray** prhs)
+	{
+		size_t i, num_imgs;
+		DirectX::Image src_img = {};
+		DirectX::ScratchImage out;
+		DXGI_FORMAT fmt = DXGI_FORMAT_UNKNOWN;
+		if(nrhs < 1)
+		{
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughInputsError", "Not enough arguments. Please supply a DdsImage.");
+		}
+		else if(nrhs > 2)
+		{
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyInputsError", "Too many arguments.");
+		}
+		
+		const mxArray* mx_img = prhs[0];
+		if(nrhs == 2)
+		{
+			fmt = ParseFormat(prhs[1]);
+		}
+		
+		mxArray* ddsret = mxCreateStructMatrix(mxGetM(mx_img), mxGetN(mx_img), 2, ddsret_fieldnames);
+		num_imgs = mxGetNumberOfElements(mx_img);
+		for(i = 0; i < num_imgs; i++)
+		{
+			ParseImage(mx_img, i, src_img);
+			hres = DirectX::Decompress(src_img, fmt, out);
+			if(FAILED(hres))
+			{
+				meu_PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "DecompressError", "There was an error while decompressing the image.");
+			}
+			DirectX::TexMetadata out_meta = out.GetMetadata();
+			mxSetField(ddsret, i, "Metadata", ExtractMetadata(out_meta));
+			mxSetField(ddsret, i, "Images", ExtractImages(out.GetImages(), out_meta.arraySize, out_meta.mipLevels, out_meta.depth, out_meta.dimension));
+		}
+		plhs[0] = ddsret;
+	}
+	
+	static void DecompressDDS(int nlhs, mxArray** plhs, int nrhs, const mxArray** prhs)
+	{
+		size_t i, j, num_dds, num_imgs;
+		DirectX::TexMetadata src_metadata = {};
+		DirectX::Image* src_imgs;
+		DirectX::ScratchImage out;
+		DXGI_FORMAT fmt = DXGI_FORMAT_UNKNOWN;
+		if(nrhs < 1)
+		{
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughInputsError", "Not enough arguments. Please supply a DdsImage.");
+		}
+		else if(nrhs > 2)
+		{
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyInputsError", "Too many arguments.");
+		}
+		
+		const mxArray* mx_dds = prhs[0];
+		if(nrhs == 2)
+		{
+			fmt = ParseFormat(prhs[1]);
+		}
+		
+		mxArray* ddsret = mxCreateStructMatrix(mxGetM(mx_dds), mxGetN(mx_dds), 2, ddsret_fieldnames);
+		num_dds = mxGetNumberOfElements(mx_dds);
+		for(i = 0; i < num_dds; i++)
+		{
+			mxArray* mx_metadata = mxGetField(mx_dds, i, "Metadata");
+			mxArray* mx_images   = mxGetField(mx_dds, i, "Images");
+			ParseMetadata(mx_metadata, src_metadata);
+			num_imgs = mxGetNumberOfElements(mx_images);
+			src_imgs = (DirectX::Image*)mxMalloc(num_imgs * sizeof(DirectX::Image));
+			for(j = 0; j < num_imgs; j++)
+			{
+				ParseImage(mx_images, j, *(src_imgs + j));
+			}
+			
+			hres = DirectX::Decompress(src_imgs, num_imgs, src_metadata, fmt, out);
+			if(FAILED(hres))
+			{
+				meu_PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "FlipRotateError", "There was an error while rotating or flipping the image.");
+			}
+			DirectX::TexMetadata out_meta = out.GetMetadata();
+			mxSetField(ddsret, i, "Metadata", ExtractMetadata(out_meta));
+			mxSetField(ddsret, i, "Images", ExtractImages(out.GetImages(), out_meta.arraySize, out_meta.mipLevels, out_meta.depth, out_meta.dimension));
+			mxFree(src_imgs);
+		}
+		plhs[0] = ddsret;
+	}
+	
+	static void FormMatrix(DirectX::Image raw_img, mxArray*& mx_rgb, mxArray*& mx_a)
+	{
+		size_t i, j, src_idx, dst_idx;
+		if(!DirectX::IsValid(raw_img.format))
+		{
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidFormatError", "Cannot create matrix from image with invalid format.");
+		}
+		if(DirectX::IsCompressed(raw_img.format))
+		{
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "CompressedFormatError", "Cannot create matrix from compressed image.");
+		}
+		// assume 8-bit unsigned normalized sRGB for now
+		mwSize rgb_sz[3] = {raw_img.height, raw_img.width, 3};
+		mx_rgb = mxCreateNumericArray(3, rgb_sz, mxUINT8_CLASS, mxREAL);
+		if(DirectX::HasAlpha(raw_img.format))
+		{
+			mx_a = mxCreateNumericMatrix(raw_img.height, raw_img.width, mxUINT8_CLASS, mxREAL);
+			auto r_data = (uint8_t*)mxGetData(mx_rgb);
+			auto g_data = (uint8_t*)mxGetData(mx_rgb) + raw_img.height * raw_img.width;
+			auto b_data = (uint8_t*)mxGetData(mx_rgb) + 2 * raw_img.height * raw_img.width;
+			auto a_data = (uint8_t*)mxGetData(mx_a);
+			for(i = 0; i < raw_img.height; i++)
+			{
+				for(j = 0; j < raw_img.width; j++)
+				{
+					dst_idx = i + j*raw_img.height;
+					src_idx = (i*raw_img.width + j) * 4;
+					r_data[dst_idx] = raw_img.pixels[src_idx];
+					g_data[dst_idx] = raw_img.pixels[src_idx + 1];
+					b_data[dst_idx] = raw_img.pixels[src_idx + 2];
+					a_data[dst_idx] = raw_img.pixels[src_idx + 3];
+				}
+			}
+		}
+		else
+		{
+			mx_a = mxCreateNumericMatrix(0, 0, mxUINT8_CLASS, mxREAL);
+			auto r_data = (uint8_t*)mxGetData(mx_rgb);
+			auto g_data = (uint8_t*)mxGetData(mx_rgb) + raw_img.height * raw_img.width;
+			auto b_data = (uint8_t*)mxGetData(mx_rgb) + 2 * raw_img.height * raw_img.width;
+			for(i = 0; i < raw_img.height; i++)
+			{
+				for(j = 0; j < raw_img.width; j++)
+				{
+					dst_idx = i + j*raw_img.height;
+					src_idx = (i*raw_img.width + j) * 4;
+					r_data[dst_idx] = raw_img.pixels[src_idx];
+					g_data[dst_idx] = raw_img.pixels[src_idx + 1];
+					b_data[dst_idx] = raw_img.pixels[src_idx + 2];
+				}
+			}
+		}
+	}
+	
+	static void ToImageMatrix(int nlhs, mxArray** plhs, int nrhs, const mxArray** prhs)
+	{
+		mxArray* mx_out_rgb;
+		mxArray* mx_out_a;
+		DXGI_FORMAT srgb_fmt = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+		DirectX::ScratchImage out;
+		DirectX::Image src_img = {};
+		size_t i, num_imgs;
+		if(nrhs < 1)
+		{
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughInputsError", "Not enough arguments. Please supply a DdsImage.");
+		}
+		else if(nrhs > 1)
+		{
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyInputsError", "Too many arguments.");
+		}
+		const mxArray* mx_img = prhs[0];
+		num_imgs = mxGetNumberOfElements(mx_img);
+		if(num_imgs < 1)
+		{
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughInputsError", "Not enough arguments. Please supply a DdsImage.");
+		}
+		else if(num_imgs == 1)
+		{
+			ParseImage(mx_img, 0, src_img);
+			if(!DirectX::HasAlpha(src_img.format))
+			{
+				srgb_fmt = DXGI_FORMAT_B8G8R8X8_UNORM_SRGB;
+			}
+			if(DirectX::IsCompressed(src_img.format))
+			{
+				// decompress image so we can convert it
+				DirectX::ScratchImage tmp;
+				hres = DirectX::Decompress(src_img, DXGI_FORMAT_UNKNOWN, tmp);
+				if(FAILED(hres))
+				{
+					meu_PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "DecompressError", "There was an error while decompressing the image.");
+				}
+				// const DirectX::Image src_img_decomp = tmp.GetImage(0,0,0);
+				// src_img = *tmp.GetImage(0, 0, 0);
+				// convert image to unsigned normalized 8-bit sRGB with alpha
+				hres = DirectX::Convert(*tmp.GetImage(0, 0, 0), srgb_fmt, DirectX::TEX_FILTER_SRGB_OUT, DirectX::TEX_THRESHOLD_DEFAULT, out);
+				if(FAILED(hres))
+				{
+					meu_PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ConversionError", "There was an error converting the image to sRGB.");
+				}
+				FormMatrix(*out.GetImage(0, 0, 0), mx_out_rgb, mx_out_a);
+			}
+			else
+			{
+				// convert image to unsigned normalized 8-bit sRGB with alpha
+				hres = DirectX::Convert(src_img, srgb_fmt, DirectX::TEX_FILTER_SRGB_OUT, DirectX::TEX_THRESHOLD_DEFAULT, out);
+				if(FAILED(hres))
+				{
+					meu_PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ConversionError", "There was an error converting the image to sRGB.");
+				}
+				FormMatrix(*out.GetImage(0, 0, 0), mx_out_rgb, mx_out_a);
+			}
+		}
+		else
+		{
+			mx_out_rgb = mxCreateCellMatrix(mxGetM(mx_img), mxGetN(mx_img));
+			mx_out_a   = mxCreateCellMatrix(mxGetM(mx_img), mxGetN(mx_img));
+			for(i = 0; i < num_imgs; i++)
+			{
+				mxArray* rgb_mat, *a_mat;
+				ParseImage(mx_img, i, src_img);
+				if(!DirectX::HasAlpha(src_img.format))
+				{
+					srgb_fmt = DXGI_FORMAT_B8G8R8X8_UNORM_SRGB;
+				}
+				if(DirectX::IsCompressed(src_img.format))
+				{
+					// decompress image so we can convert it
+					hres = DirectX::Decompress(src_img, DXGI_FORMAT_UNKNOWN, out);
+					if(FAILED(hres))
+					{
+						meu_PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "DecompressError", "There was an error while decompressing the image.");
+					}
+					src_img = *out.GetImage(0, 0, 0);
+					out = DirectX::ScratchImage();
+				}
+				// convert image to unsigned normalized 8-bit sRGB with alpha
+				hres = DirectX::Convert(src_img, srgb_fmt, DirectX::TEX_FILTER_SRGB_OUT, DirectX::TEX_THRESHOLD_DEFAULT, out);
+				if(FAILED(hres))
+				{
+					meu_PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ConversionError", "There was an error converting the image to sRGB.");
+				}
+				FormMatrix(*out.GetImages(), rgb_mat, a_mat);
+				mxSetCell(mx_out_rgb, i, rgb_mat);
+				mxSetCell(mx_out_a, i, a_mat);
+			}
+		}
+		plhs[0] = mx_out_rgb;
+		if(nlhs > 1)
+		{
+			plhs[1] = mx_out_a;
+		}
+	}
+	
+	static void ToMatrix(int nlhs, mxArray** plhs, int nrhs, const mxArray** prhs)
+	{
+		mxArray* mx_out_rgb;
+		mxArray* mx_out_a;
+		DirectX::Image src_img = {};
+		size_t i, num_imgs;
+		if(nrhs < 1)
+		{
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughInputsError", "Not enough arguments. Please supply a DdsImage.");
+		}
+		else if(nrhs > 1)
+		{
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyInputsError", "Too many arguments.");
+		}
+		const mxArray* mx_img = prhs[0];
+		num_imgs = mxGetNumberOfElements(mx_img);
+		if(num_imgs < 1)
+		{
+			meu_PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughInputsError", "Not enough arguments. Please supply a DdsImage.");
+		}
+		else if(num_imgs == 1)
+		{
+			ParseImage(mx_img, 0, src_img);
+			FormMatrix(src_img, mx_out_rgb, mx_out_a);
+		}
+		else
+		{
+			mx_out_rgb = mxCreateCellMatrix(mxGetM(mx_img), mxGetN(mx_img));
+			mx_out_a   = mxCreateCellMatrix(mxGetM(mx_img), mxGetN(mx_img));
+			for(i = 0; i < num_imgs; i++)
+			{
+				mxArray* rgb_mat, *a_mat;
+				ParseImage(mx_img, i, src_img);
+				FormMatrix(src_img, rgb_mat, a_mat);
+				mxSetCell(mx_out_rgb, i, rgb_mat);
+				mxSetCell(mx_out_a, i, a_mat);
+			}
+		}
+		plhs[0] = mx_out_rgb;
+		if(nlhs > 1)
+		{
+			plhs[1] = mx_out_a;
+		}
+	}
+
 	// FlipRotate                      | DONE
 	// Resize                          |
 	// Convert                         | DONE
@@ -598,13 +886,9 @@ static mxArray* RowToColumn2(uint8_t* src, size_t row_pitch, size_t slice_pitch,
 	// Decompress                      |
 	// ComputeNormalMap                |
 	// ComputeMSE                      |
-	
-	// ToImageMatrix                   |
-	
-	static void ToImageMatrix(int nlhs, mxArray** plhs, int nrhs, const mxArray** prhs)
-	{
-	
-	}
+
+	// ToImageMatrix                   | PARTIAL
+	// ToMatrix                        | PARTIAL
 
 /* The gateway function. */
 	void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
@@ -640,13 +924,25 @@ static mxArray* RowToColumn2(uint8_t* src, size_t row_pitch, size_t slice_pitch,
 		{
 			op_func = ConvertDDS;
 		}
-		else if(CompareString(prhs[0], "FLIPROTATE"))
+		else if(CompareString(prhs[0], "FLIP_ROTATE"))
 		{
 			op_func = FlipRotateImage;
 		}
-		else if(CompareString(prhs[0], "FLIPROTATE_DDS"))
+		else if(CompareString(prhs[0], "FLIP_ROTATE_DDS"))
 		{
 			op_func = FlipRotateDDS;
+		}
+		else if(CompareString(prhs[0], "DECOMPRESS"))
+		{
+			op_func = DecompressImage;
+		}
+		else if(CompareString(prhs[0], "DECOMPRESS_DDS"))
+		{
+			op_func = DecompressDDS;
+		}
+		else if(CompareString(prhs[0], "IMAGE_MATRIX"))
+		{
+			op_func = ToImageMatrix;
 		}
 		else
 		{
