@@ -30,20 +30,14 @@ classdef Dds
 		
 		function imshow(obj)
 			if(obj.Metadata.IsCubeMap)
-				h = obj.Images(1).Height;
-				w = obj.Images(1).Width;
-				cubearr(:,:,:,2) = toimage(obj.Images(3));
-				cubearr(:,:,:,1) = zeros(h, w, 3);
-				cubearr(:,:,:,3) = zeros(h, w, 3);
-				cubearr(:,:,:,4) = zeros(h, w, 3);
-				cubearr(:,:,:,5) = toimage(obj.Images(2));
-				cubearr(:,:,:,6) = toimage(obj.Images(5));
-				cubearr(:,:,:,7) = toimage(obj.Images(1));
-				cubearr(:,:,:,8) = toimage(obj.Images(6));
-				cubearr(:,:,:,9) = zeros(h, w, 3);
-				cubearr(:,:,:,10) = toimage(obj.Images(4));
-				cubearr(:,:,:,11) = zeros(h, w, 3);
-				cubearr(:,:,:,12) = zeros(h, w, 3);
+				cubearr = cell(12,1);
+				% indexing reference: https://en.wikipedia.org/wiki/Cube_mapping#/media/File:Cube_map.svg
+				cubearr{2} =  toimage(obj.Images(3));
+				cubearr{5} =  toimage(obj.Images(2));
+				cubearr{6} =  toimage(obj.Images(5));
+				cubearr{7} =  toimage(obj.Images(1));
+				cubearr{8} =  toimage(obj.Images(6));
+				cubearr{10} = toimage(obj.Images(4));
 				montage(cubearr, 'Size', [3,4]);
 			else
 				imshow(obj.Images(1));
