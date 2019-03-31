@@ -3,8 +3,6 @@
 
 #include <unordered_map>
 
-#define MAX_FLAG_NAME_LEN 128
-
 class BiMap
 {
 private:

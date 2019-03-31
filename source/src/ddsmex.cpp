@@ -4,7 +4,7 @@
 #include "directxtex.inl"
 #include "ddsio.h"
 
-namespace ddsml
+namespace DDSMex
 {
 	template<class T>
 	static void SetScalarField(mxArray* mx_struct, mwIndex idx, const char* field, mxClassID classid, T data)

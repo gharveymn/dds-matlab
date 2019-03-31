@@ -66,14 +66,6 @@ static void meu_WriteSeverityString(char* buffer, unsigned int error_severity);
  */
 static void meu_WriteSystemErrorString(char* buffer, unsigned int error_severity);
 
-static const char* meu_library_name = "";
-
-static void (*meu_error_callback)(unsigned int) = nullptr;
-static void (*meu_warning_callback)() = nullptr;
-
-static const char* meu_error_help_message = "";
-static const char* meu_warning_help_message = "";
-
 void meu_PrintMexError(const char* file_name, int line, unsigned int error_severity, const char* error_id, const char* error_message, ...)
 {
 	
@@ -127,36 +119,6 @@ void meu_PrintMexWarning(const char* warn_id, const char* warn_message, ...)
 		meu_warning_callback();
 	}
 	mexWarnMsgIdAndTxt(id_buffer, full_message);
-}
-
-
-void meu_SetLibraryName(const char* library_name)
-{
-	meu_library_name = library_name;
-}
-
-
-void meu_SetErrorHelpMessage(const char* help_message)
-{
-	meu_error_help_message = help_message;
-}
-
-
-void meu_SetWarningHelpMessage(const char* help_message)
-{
-	meu_warning_help_message = help_message;
-}
-
-
-void meu_SetErrorCallback(void (*callback_function)(unsigned int))
-{
-	meu_error_callback = callback_function;
-}
-
-
-void meu_SetWarningCallback(void (*callback_function)())
-{
-	meu_warning_callback = callback_function;
 }
 
 
