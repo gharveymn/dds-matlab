@@ -3,8 +3,8 @@ PROJECT(dds-matlab CXX)
 
 INCLUDE_DIRECTORIES(${MATLAB_INCLUDE_DIR} headers)
 
-SET(SOURCE_FILES	headers/directxtex.h headers/directxtex.inl
-		headers/ddsio.h ddsio.cpp
-				mlerrorutils.cpp headers/mlerrorutils.h headers/ddsfmt.h ddsfmt.cpp)
+SET(SOURCE_FILES directxtex.h directxtex.inl
+		ddsmex.hpp ddsmex.cpp
+				ddsmex_mexerror.cpp ddsmex_mexerror.hpp ddsfmt.hpp ddsfmt.cpp ddsmex_mexutils.cpp ddsmex_mexutils.hpp ddsmex_utils.cpp ddsmex_utils.hpp ddsmex_dds.cpp ddsmex_dds.hpp)
 
-ADD_EXECUTABLE(ddsio.mexw64 ${SOURCE_FILES})
+ADD_LIBRARY(ddsmex.mexw64 ${SOURCE_FILES})

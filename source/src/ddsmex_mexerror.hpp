@@ -6,9 +6,8 @@
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
- 
-#ifndef MATSHARE_UTILS_H
-#define MATSHARE_UTILS_H
+
+#pragma once
 
 #ifdef _WIN32
 #  ifndef WIN32_LEAN_AND_MEAN
@@ -63,7 +62,7 @@ namespace MEXError
 	 */
 	void PrintMexWarning(const char* warn_id, const char* warn_message, ...);
 	
-	extern const char* library_name;
+	extern const char* g_library_name;
 	
 	extern void (*error_callback)(unsigned int);
 	extern void (*warning_callback)();
@@ -72,5 +71,3 @@ namespace MEXError
 	extern const char* warning_help_message;
 	
 }
-
-#endif /* MATSHARE_UTILS_H */

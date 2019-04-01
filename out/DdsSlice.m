@@ -1,4 +1,4 @@
-classdef DdsImage
+classdef DdsSlice
     
 	% DirectXTex Image properties
 	
@@ -17,7 +17,7 @@ classdef DdsImage
 	end
 	
 	methods
-		function obj = DdsImage(images, formatid)
+		function obj = DdsSlice(images, formatid)
 			if(nargin > 0)
 				m = size(images,1);
 				n = size(images,2);
@@ -36,32 +36,32 @@ classdef DdsImage
 			end
 		end
 		
-		function imshow(obj)
-			imshow(toimage(obj));
+		function h = imshow(obj)
+			h = imshow(toimage(obj));
 		end
 		
 		function varargout = toimage(obj)
 			nout = max(nargout,1);
-			[varargout{1:nout}] = ddsio('IMAGE_MATRIX', struct(obj));
+			[varargout{1:nout}] = ddsmex('IMAGE_MATRIX', struct(obj));
 		end
 		
 		function newdds = convert(obj, varargin)
-			newdds = Dds(ddsio('CONVERT', struct(obj), varargin{:}));
+			newdds = Dds(ddsmex('CONVERT', struct(obj), varargin{:}));
 		end
 		
 		function newdds = flip(obj, flags)
-			newdds = Dds(ddsio('FLIP_ROTATE', struct(obj), flags));
+			newdds = Dds(ddsmex('FLIP_ROTATE', struct(obj), flags));
 		end
 		
 		function newdds = rotate(obj, flags)
-			newdds = Dds(ddsio('FLIP_ROTATE', struct(obj), flags));
+			newdds = Dds(ddsmex('FLIP_ROTATE', struct(obj), flags));
 		end
 		
 		function newdds = decompress(obj,fmt)
 			if(nargin == 2)
-				newdds = Dds(ddsio('DECOMPRESS', struct(obj), fmt));
+				newdds = Dds(ddsmex('DECOMPRESS', struct(obj), fmt));
 			else
-				newdds = Dds(ddsio('DECOMPRESS', struct(obj)));
+				newdds = Dds(ddsmex('DECOMPRESS', struct(obj)));
 			end
 		end
 		

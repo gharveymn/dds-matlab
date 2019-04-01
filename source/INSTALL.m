@@ -20,7 +20,7 @@ function INSTALL
 	end
 	
 	sources = {
-		'ddsio.cpp',...
+		'ddsmex.cpp',...
 		'mlerrorutils.cpp'
 		};
 
@@ -42,7 +42,7 @@ function INSTALL
 % 		mexflags = [mexflags {'-compatibleArrayDims'}];
 % 	end
 
-	fprintf('-Compiling ddsio...')
+	fprintf('-Compiling ddsmex...')
 	mexflags = [mexflags {'COMPFLAGS="$COMPFLAGS -Wall"'}];
 	% mexflags = [mexflags {'CFLAGS="$CFLAGS -Wall -Werror -Wno-unused-function"'}];
 	mex(mexflags{:} , sources{:})

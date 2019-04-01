@@ -1,12 +1,11 @@
-#ifndef DDS_MATLAB_DDSFMT_H
-#define DDS_MATLAB_DDSFMT_H
+#pragma once
 
-#include <directxtex.h>
+#include "directxtex.h"
 
 #define MAX_CHANNELS 4
 #define MAX_CHANNEL_NAME_LEN 16
 
-namespace ddsio
+namespace DDSMex
 {
 	
 	class DXGIPixels
@@ -26,13 +25,7 @@ namespace ddsio
 		/* getChannel */
 		/* nextPixel */
 		
-		DXGIPixels(DXGI_FORMAT fmt)
-		{
-			switch(fmt)
-			{
-			
-			}
-		}
+		DXGIPixels(DXGI_FORMAT fmt) {}
 		
 		
 		void set(DXGI_FORMAT fmt, size_t nch, size_t px_sz, size_t ch_sz[MAX_CHANNELS], char ch_names[MAX_CHANNELS][MAX_CHANNEL_NAME_LEN])
@@ -57,4 +50,3 @@ namespace ddsio
 	};
 }
 
-#endif /* DDS_MATLAB_DDSFMT_H */
