@@ -78,7 +78,7 @@ namespace DDSMEX
 		void FormMatrix(mxArray*& mx_dds_rgb, bool combine_alpha = false);
 		void FormMatrix(mxArray*& mx_dds_rgb, mxArray*& mx_dds_a);
 		void FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, bool combine_alpha);
-		void FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, mxArray*& mx_ddsslice_a)
+		void FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, mxArray*& mx_ddsslice_a);
 	};
 	
 	class DDSArray
@@ -104,9 +104,10 @@ namespace DDSMEX
 		DDSArray& operator=(DDSArray&& in) = default;
 		
 		/* initializers */
-		void ReadFile    (MEXF_IN);
-		void Import      (MEXF_IN);
+		void ReadFile                    (MEXF_IN);
+		void Import                      (MEXF_IN);
 		
+		/* utilities */
 		void FlipRotate                  (MEXF_IN);
 		void Resize                      (MEXF_IN);
 		void Convert                     (MEXF_IN);
@@ -117,11 +118,11 @@ namespace DDSMEX
 		void PremultiplyAlpha            (MEXF_IN);
 		void Compress                    (MEXF_IN);
 		void Decompress                  (MEXF_IN);
+		static void CopyRectangle        (DDSArray& src, DDSArray& dst, MEXF_IN);
 		void ComputeNormalMap            (MEXF_IN);
+		static void ComputeMSE           (DDSArray& ddsarray1, DDSArray& ddsarray2, MEXF_SIG);
 		
-		
-		static void CopyRectangle               (DDSArray& src, DDSArray& dst, MEXF_IN);
-		static void ComputeMSE                  (DDSArray& ddsarray1, DDSArray& ddsarray2, MEXF_SIG);
+		void SaveFile                    (MEXF_IN);
 		
 		void ToImage                     (MEXF_SIG);
 		void ToMatrix                    (MEXF_SIG);
@@ -163,6 +164,7 @@ namespace DDSMEX
 			COMPUTE_NORMAL_MAP,
 			COPY_RECTANGLE,
 			COMPUTE_MSE,
+			SAVE_FILE,
 			TO_IMAGE,
 			TO_MATRIX
 		};
@@ -177,6 +179,7 @@ namespace DDSMEX
 		
 		/* import helpers */
 		static wchar_t* ParseFilename(const mxArray* mx_filename);
+		static void     ParseFilename(const mxArray* mx_filename, std::wstring& filename);
 		static DDS*     AllocateDDSArray(size_t num);
 		static DDS*     AllocateDDSArray(size_t num, DDS* in);
 		static DDS*     AllocateDDSArray(size_t num, DWORD flags);

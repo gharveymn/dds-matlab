@@ -23,6 +23,7 @@ static std::map<std::string, DDSArray::operation> g_directive_map
 	{"COPY_RECTANGLE",                   DDSArray::COPY_RECTANGLE                  },
 	{"COMPUTE_NORMAL_MAP",               DDSArray::COMPUTE_NORMAL_MAP              },
 	{"COMPUTE_MSE",                      DDSArray::COMPUTE_MSE                     },
+	{"SAVE_FILE",                        DDSArray::SAVE_FILE                       },
 	{"TO_IMAGE",                         DDSArray::TO_IMAGE                        },
 	{"TO_MATRIX",                        DDSArray::TO_MATRIX                       }
 };
@@ -776,7 +777,7 @@ wchar_t* DDSArray::ParseFilename(const mxArray* mx_filename)
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputError", "Filenames must be of type 'char'.");
 	}
-	mxChar* mx_str = mxGetChars(mx_filename);
+	const mxChar* mx_str = mxGetChars(mx_filename);
 	mwSize mx_strlen = mxGetNumberOfElements(mx_filename);
 	auto filename = (wchar_t*)mxMalloc((mx_strlen + 1)*sizeof(wchar_t));
 	for(i = 0; i < mx_strlen; i++)
@@ -785,6 +786,22 @@ wchar_t* DDSArray::ParseFilename(const mxArray* mx_filename)
 	}
 	filename[mx_strlen] = 0;
 	return filename;
+}
+
+void DDSArray::ParseFilename(const mxArray* mx_filename, std::wstring& filename)
+{
+	mwIndex i;
+	if(!mxIsChar(mx_filename))
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputError", "Filenames must be of type 'char'.");
+	}
+	const mxChar* mx_str = mxGetChars(mx_filename);
+	mwSize mx_strlen = mxGetNumberOfElements(mx_filename);
+	filename.clear();
+	for(i = 0; i < mx_strlen; i++)
+	{
+		filename += mx_str[i];
+	}
 }
 
 void DDSArray::ParseFlags(const mxArray* mx_flags, BiMap &map, DWORD &flags)
@@ -919,14 +936,14 @@ void DDSArray::Resize(MEXF_IN)
 		{
 			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidSizeError", "Missing required width argument.");
 		}
-		h = mxGetScalar(prhs[0]);
+		h = (size_t)mxGetScalar(prhs[0]);
 		
 		/* expect width as scalar*/
 		if(!mxIsDouble(prhs[1]) || !mxIsScalar(prhs[1]))
 		{
 			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidSizeError", "Input width must be a scalar double.");
 		}
-		w = mxGetScalar(prhs[1]);
+		w = (size_t)mxGetScalar(prhs[1]);
 		if(nrhs > 2)
 		{
 			DDSArray::ParseFlags(prhs[2], g_filterflag_map, filter_flags);
@@ -1002,7 +1019,7 @@ void DDSArray::Convert(MEXF_IN)
 		hres = DirectX::Convert(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), fmt, filter_flags, threshold, post_op);
 		if(FAILED(hres))
 		{
-			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ConvertError", "There was an error converting the image.");
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ConvertError", "There was an error while converting the image.");
 		}
 	}
 	delete[](this->_arr);
@@ -1025,7 +1042,7 @@ void DDSArray::ConvertToSinglePlane(MEXF_IN)
 		hres = DirectX::ConvertToSinglePlane(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), post_op);
 		if(FAILED(hres))
 		{
-			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ConvertToSinglePlaneError", "There was an error converting the image to a single plane.");
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ConvertToSinglePlaneError", "There was an error while converting the image to a single plane.");
 		}
 	}
 	delete[](this->_arr);
@@ -1051,7 +1068,7 @@ void DDSArray::GenerateMipMaps(MEXF_IN)
 			{
 				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidInputError", "The number of levels must be scalar.");
 			}
-			levels = mxGetScalar(prhs[0]);
+			levels = (size_t)mxGetScalar(prhs[0]);
 			if(nrhs > 1)
 			{
 				DDSArray::ParseFlags(prhs[1], g_filterflag_map, filter_flags);
@@ -1083,7 +1100,7 @@ void DDSArray::GenerateMipMaps(MEXF_IN)
 				hres = DirectX::GenerateMipMaps(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), filter_flags, levels, post_op);
 				if(FAILED(hres))
 				{
-					MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "GenerateMipMipsError", "There was an error converting the image.");
+					MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "GenerateMipMipsError", "There was an error while generating mipmaps for the image.");
 				}
 			}
 			case DirectX::TEX_DIMENSION_TEXTURE3D:
@@ -1091,7 +1108,7 @@ void DDSArray::GenerateMipMaps(MEXF_IN)
 				hres = DirectX::GenerateMipMaps3D(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), filter_flags, levels, post_op);
 				if(FAILED(hres))
 				{
-					MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "GenerateMipMips3DError", "There was an error converting the image.");
+					MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "GenerateMipMips3DError", "There was an error while generating mipmaps for the image.");
 				}
 				break;
 			}
@@ -1122,7 +1139,7 @@ void DDSArray::ScaleMipMapsAlphaForCoverage(MEXF_IN)
 			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidSizeError", "Reference alpha level must be a scalar double.");
 		}
 		
-		alpha_ref = mxGetScalar(prhs[0]);
+		alpha_ref = (float)mxGetScalar(prhs[0]);
 		
 		if(alpha_ref < 0 || alpha_ref > 1)
 		{
@@ -1152,10 +1169,8 @@ void DDSArray::ScaleMipMapsAlphaForCoverage(MEXF_IN)
 void DDSArray::PremultiplyAlpha(MEXF_IN)
 {
 	size_t i;
-	DXGI_FORMAT fmt;
 	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
 	DWORD pmalpha_flags = DirectX::TEX_PMALPHA_DEFAULT;
-	float threshold = DirectX::TEX_THRESHOLD_DEFAULT;
 	if(nrhs > 1)
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
@@ -1173,7 +1188,7 @@ void DDSArray::PremultiplyAlpha(MEXF_IN)
 		hres = DirectX::PremultiplyAlpha(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), pmalpha_flags, post_op);
 		if(FAILED(hres))
 		{
-			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ConvertError", "There was an error converting the image.");
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "PremultiplyAlphaError", "There was an error while premultiplying the alpha of the image.");
 		}
 	}
 	delete[](this->_arr);
@@ -1183,8 +1198,8 @@ void DDSArray::PremultiplyAlpha(MEXF_IN)
 void DDSArray::Compress(MEXF_IN)
 {
 	size_t i;
+	DXGI_FORMAT fmt;
 	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
-	DXGI_FORMAT fmt = DXGI_FORMAT_UNKNOWN;
 	DWORD compress_flags  = DirectX::TEX_COMPRESS_DEFAULT;
 	float threshold = DirectX::TEX_THRESHOLD_DEFAULT;
 	if(nrhs < 1)
@@ -1209,7 +1224,7 @@ void DDSArray::Compress(MEXF_IN)
 				{
 					MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidInputError", "The alpha threshold must be scalar.");
 				}
-				threshold = mxGetScalar(prhs[2]);
+				threshold = (float)mxGetScalar(prhs[2]);
 			}
 		}
 		else if(mxIsDouble(prhs[1]))
@@ -1222,7 +1237,7 @@ void DDSArray::Compress(MEXF_IN)
 			{
 				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidInputError", "The alpha threshold must be scalar.");
 			}
-			threshold = mxGetScalar(prhs[1]);
+			threshold = (float)mxGetScalar(prhs[1]);
 		}
 		else
 		{
@@ -1237,7 +1252,7 @@ void DDSArray::Compress(MEXF_IN)
 		hres = DirectX::Compress(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), fmt, compress_flags, threshold, post_op);
 		if(FAILED(hres))
 		{
-			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "DecompressError", "There was an error while decompressing the image.");
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "CompressError", "There was an error while compressing the image.");
 		}
 	}
 	delete[](this->_arr);
@@ -1295,7 +1310,7 @@ void DDSArray::ComputeNormalMap(MEXF_IN)
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidSizeError", "Amplitude must be a scalar double.");
 	}
-	amplitude = mxGetScalar(prhs[1]);
+	amplitude = (float)mxGetScalar(prhs[1]);
 	
 	if(nrhs == 3)
 	{
@@ -1309,7 +1324,7 @@ void DDSArray::ComputeNormalMap(MEXF_IN)
 		hres = DirectX::ComputeNormalMap(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), cn_flags, amplitude, fmt, post_op);
 		if(FAILED(hres))
 		{
-			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "DecompressError", "There was an error while decompressing the image.");
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ComputeNormalMapError", "There was an error while computing the normal map.");
 		}
 	}
 	delete[](this->_arr);
@@ -1374,7 +1389,7 @@ void DDSArray::CopyRectangle(DDSArray& src, DDSArray& dst, MEXF_IN)
 			hres = DirectX::CopyRectangle(*(pre_op_imgs + j), rect, *(post_op_imgs + j), filter_flags, out_x, out_y);
 			if(FAILED(hres))
 			{
-				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "DecompressError", "There was an error while decompressing the image.");
+				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "CopyRectangleError", "There was an error while copying over the rectangle.");
 			}
 		}
 	}
@@ -1517,7 +1532,7 @@ void DDSArray::ComputeMSE(const DirectX::Image* img1, const DirectX::Image* img2
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ComputeMSEError", "There was an error while computing the mean-squared error.");
 	}
-	mx_ddsslice_mse = mxCreateDoubleScalar(mse);
+	mx_ddsslice_mse = mxCreateDoubleScalar((double)mse);
 }
 
 void DDSArray::ComputeMSE(const DirectX::Image* img1, const DirectX::Image* img2, DWORD cmse_flags, mxArray*& mx_ddsslice_mse, mxArray*& mx_ddsslice_mseV)
@@ -1531,11 +1546,65 @@ void DDSArray::ComputeMSE(const DirectX::Image* img1, const DirectX::Image* img2
 	}
 	mx_ddsslice_mse = mxCreateDoubleScalar(mse);
 	mx_ddsslice_mseV = mxCreateDoubleMatrix(4, 1, mxREAL);
-	auto data = mxGetDoubles(mx_ddsslice_mseV);
-	data[0] = mseV[0];
-	data[1] = mseV[1];
-	data[2] = mseV[2];
-	data[3] = mseV[3];
+	auto data = (double*)mxGetData(mx_ddsslice_mseV);
+	data[0] = (double)mseV[0];
+	data[1] = (double)mseV[1];
+	data[2] = (double)mseV[2];
+	data[3] = (double)mseV[3];
+}
+
+void DDSArray::SaveFile(MEXF_IN)
+{
+	size_t i;
+	std::wstring filename;
+	DWORD ctrl_flags = DirectX::DDS_FLAGS_NONE;
+	if(nrhs < 1)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughArgumentsError", "No enough arguments. Please supply a filename.");
+	}
+	if(nrhs > 1)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
+	}
+	
+	if(nrhs > 1)
+	{
+		DDSArray::ParseFlags(prhs[1], g_ctrlflag_map, ctrl_flags);
+	}
+	
+	if(mxIsChar(prhs[0]))
+	{
+		DDSArray::ParseFilename(prhs[0], filename);
+		DDS& pre_op = this->GetDDS(0);
+		hres = DirectX::SaveToDDSFile(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), ctrl_flags, filename.c_str());
+		if(FAILED(hres))
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "SaveToDDSFileError", "There was an error while saving the DDS file.");
+		}
+	}
+	else if(mxIsCell(prhs[0]))
+	{
+		
+		if(mxGetNumberOfElements(prhs[0]) != this->GetSize())
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidArgumentError", "The number of Dds objects differs from the number of filenames.");
+		}
+		
+		for(i = 0; i < this->_size; i++)
+		{
+			DDSArray::ParseFilename(mxGetCell(prhs[0], i), filename);
+			DDS& pre_op = this->GetDDS(i);
+			hres = DirectX::SaveToDDSFile(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), ctrl_flags, filename.c_str());
+			if(FAILED(hres))
+			{
+				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "SaveToDDSFileError", "There was an error while saving the DDS file.");
+			}
+		}
+	}
+	else
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidArgumentError", "The filename argument must either be class 'char' or class 'cell'.");
+	}
 }
 
 void DDSArray::ToImage(MEXF_SIG)

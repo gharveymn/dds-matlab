@@ -57,6 +57,7 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		case DDSArray::COMPUTE_NORMAL_MAP:
 		case DDSArray::COPY_RECTANGLE:
 		case DDSArray::COMPUTE_MSE:
+		case DDSArray::SAVE_FILE:
 		case DDSArray::TO_IMAGE:
 		case DDSArray::TO_MATRIX:
 		{
@@ -156,6 +157,11 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 			}
 			dds_cmp.Import(num_options, options);
 			DDSArray::ComputeMSE(dds_array, dds_cmp, nlhs, plhs, num_options, options);
+			return; // EARLY RETURN
+		}
+		case DDSArray::SAVE_FILE:
+		{
+			dds_array.SaveFile(num_options, options);
 			return; // EARLY RETURN
 		}
 		default:
