@@ -14,7 +14,8 @@ const char* MEXError::g_library_name = "ddsmex";
 /* The gateway function. */
 void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 {
-	void (DDSArray::* op_func)(int, const mxArray* []) = nullptr;
+	
+	DDSArray dds_array;
 	
 	if(nrhs < 1)
 	{
@@ -26,48 +27,82 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidDirectiveError", "The directive supplied must be of class 'char'.");
 	}
 	
-	if(MEXUtils::CompareMEXString(prhs[0], "READFILE"))
+	DDSArray::operation op = DDSArray::GetOperation(prhs[0]);
+	
+	int num_in              = nrhs-1;
+	const mxArray** in      = prhs+1;
+	
+	switch(op)
 	{
-		DDSArray::ReadFile(nlhs, plhs, nrhs, prhs);
-		return;
-	}
-	else if(MEXUtils::CompareMEXString(prhs[0], "READMETA"))
-	{
-		DDSArray::ReadMetadata(nlhs, plhs, nrhs, prhs);
-		return;
+		case DDSArray::READ_FILE:
+		{
+			DDSArray::ReadFile(nlhs, plhs, num_in, in);
+			return;
+		}
+		case DDSArray::READ_META:
+		{
+			DDSArray::ReadMetadata(nlhs, plhs, num_in, in);
+			return;
+		}
+		case DDSArray::FLIP_ROTATE:
+		case DDSArray::RESIZE:
+		case DDSArray::CONVERT:
+		case DDSArray::CONVERT_TO_SINGLE_PLANE:
+		case DDSArray::GENERATE_MIPMAPS:
+		case DDSArray::GENERATE_MIPMAPS_3D:
+		case DDSArray::SCALE_MIPMAPS_ALPHA_FOR_COVERAGE:
+		case DDSArray::PREMULTIPLY_ALPHA:
+		case DDSArray::COMPRESS:
+		case DDSArray::DECOMPRESS:
+		case DDSArray::COMPUTE_NORMAL_MAP:
+		case DDSArray::COMPUTE_MSE:
+		case DDSArray::TO_IMAGE:
+		case DDSArray::TO_MATRIX:
+		{
+			dds_array.Import(num_in, in);
+			break;
+		}
+		case DDSArray::NO_OP:
+		default:
+		{
+			return;
+		}
 	}
 	
-	DDSArray dds_array = DDSArray::Import(prhs[0]);
+	int num_options              = num_in-1;
+	const mxArray** options      = in+1;
 	
-	int num_options         = nrhs-1;
-	const mxArray** options = prhs+1;
-	
-	if(MEXUtils::CompareMEXString(prhs[0], "TOIMAGE"))
+	switch(op)
 	{
-		dds_array.ToImage(nlhs, plhs, num_options, options);
-		return;
-	}
-	else if(MEXUtils::CompareMEXString(prhs[0], "TOMATRIX"))
-	{
-		dds_array.ToMatrix(nlhs, plhs, num_options, options);
-		return;
-	}
-	
-	if(MEXUtils::CompareMEXString(prhs[0], "CONVERT"))
-	{
-		dds_array.Convert(num_options, options);
-	}
-	else if(MEXUtils::CompareMEXString(prhs[0], "FLIPROTATE"))
-	{
-		dds_array.FlipRotate(num_options, options);
-	}
-	else if(MEXUtils::CompareMEXString(prhs[0], "DECOMPRESS"))
-	{
-		dds_array.Decompress(num_options, options);
-	}
-	else
-	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidDirectiveError", "The directive supplied does not correspond to an operation.");
+		case DDSArray::TO_IMAGE:
+		{
+			dds_array.ToImage(nlhs, plhs, num_options, options);
+			return;
+		}
+		case DDSArray::TO_MATRIX:
+		{
+			dds_array.ToMatrix(nlhs, plhs, num_options, options);
+			return;
+		}
+		case DDSArray::CONVERT:
+		{
+			dds_array.Convert(num_options, options);
+			break;
+		}
+		case DDSArray::FLIP_ROTATE:
+		{
+			dds_array.FlipRotate(num_options, options);
+			break;
+		}
+		case DDSArray::DECOMPRESS:
+		{
+			dds_array.Decompress(num_options, options);
+			break;
+		}
+		default:
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidDirectiveError", "The directive supplied does not correspond to an operation.");
+		}
 	}
 	
 	dds_array.ToExport(nlhs, plhs);

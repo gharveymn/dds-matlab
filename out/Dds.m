@@ -1,4 +1,4 @@
-classdef Dds
+classdef Dds < handle
 	%DDS Summary of this class goes here
 	%   Detailed explanation goes here
 	
@@ -22,7 +22,7 @@ classdef Dds
 				for i = m:-1:1
 					for j = n:-1:1
 						obj(i,j).Metadata = s(i,j).Metadata;
-						obj(i,j).Images = DdsSlice(s(i,j).Images, obj(i,j).Metadata.Format.ID);
+						obj(i,j).Images = DdsSlice(s(i,j).Images);
 					end
 				end
 			end
@@ -63,11 +63,11 @@ classdef Dds
 		end
 		
 		function newdds = flip(obj, flags)
-			newdds = Dds(ddsmex('FLIPROTATE',struct(obj), flags));
+			newdds = Dds(ddsmex('FLIP_ROTATE',struct(obj), flags));
 		end
 		
 		function newdds = rotate(obj, flags)
-			newdds = Dds(ddsmex('FLIPROTATE',struct(obj), flags));
+			newdds = Dds(ddsmex('FLIP_ROTATE',struct(obj), flags));
 		end
 		
 		function newdds = decompress(obj,fmt)
@@ -213,11 +213,11 @@ classdef Dds
 	
 	methods (Static)
 		function obj = read(varargin)
-			obj = Dds(ddsmex('READ',varargin{:}));
+			obj = Dds(ddsmex('READ_FILE',varargin{:}));
 		end
 		
 		function metadata = finfo(varargin)
-			metadata = ddsmex('READMETADATA', varargin{:});
+			metadata = ddsmex('READ_META', varargin{:});
 		end
 	end
 	

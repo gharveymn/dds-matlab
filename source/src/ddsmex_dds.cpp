@@ -6,9 +6,62 @@
 
 using namespace DDSMEX;
 
+static std::map<std::string, DDSArray::operation> g_directive_map
+{
+	{"READ_FILE",                        DDSArray::READ_FILE                       },
+	{"READ_META",                        DDSArray::READ_META                       },
+	{"FLIP_ROTATE",                      DDSArray::FLIP_ROTATE                     },
+	{"RESIZE",                           DDSArray::RESIZE                          },
+	{"CONVERT",                          DDSArray::CONVERT                         },
+	{"CONVERT_TO_SINGLE_PLANE",          DDSArray::CONVERT_TO_SINGLE_PLANE         },
+	{"GENERATE_MIPMAPS",                 DDSArray::GENERATE_MIPMAPS                },
+	{"GENERATE_MIPMAPS_3D",              DDSArray::GENERATE_MIPMAPS_3D             },
+	{"SCALE_MIPMAPS_ALPHA_FOR_COVERAGE", DDSArray::SCALE_MIPMAPS_ALPHA_FOR_COVERAGE},
+	{"PREMULTIPLY_ALPHA",                DDSArray::PREMULTIPLY_ALPHA               },
+	{"COMPRESS",                         DDSArray::COMPRESS                        },
+	{"DECOMPRESS",                       DDSArray::DECOMPRESS                      },
+	{"COMPUTE_NORMAL_MAP",               DDSArray::COMPUTE_NORMAL_MAP              },
+	{"COMPUTE_MSE",                      DDSArray::COMPUTE_MSE                     },
+	{"TO_IMAGE",                         DDSArray::TO_IMAGE                        },
+	{"TO_MATRIX",                        DDSArray::TO_MATRIX                       }
+};
+
+DDS::DDS(const mxArray* mx_width, const mxArray* mx_height, const mxArray* mx_row_pitch, const mxArray* mx_slice_pitch, const mxArray* mx_pixels, const mxArray* mx_formatid, const mxArray* mx_flags)
+{
+	if((mx_width == nullptr) || (mx_height == nullptr) || (mx_row_pitch == nullptr) || (mx_slice_pitch == nullptr) || (mx_pixels == nullptr) || (mx_formatid == nullptr) || (mx_flags == nullptr))
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidImportError", "An imported DdsSlice field was unexpectedly empty.");
+	}
+	this->_flags = (DWORD)*(uint32_T*)mxGetData(mx_flags);
+	
+	auto width =      (size_t)*(uint64_T*)mxGetData(mx_width);
+	auto height =     (size_t)*(uint64_T*)mxGetData(mx_height);
+	auto format =     (DXGI_FORMAT)*(uint32_T*)mxGetData(mx_formatid);
+	
+	this->Initialize2D(format, width, height, 1, 1, this->_flags);
+	
+	DirectX::Image image = *this->GetImages();
+	if(image.rowPitch != (size_t)*(uint64_T*)mxGetData(mx_row_pitch))
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidImportError", "The imported row pitch of the DdsSlice differs from the expected row pitch.");
+	}
+	else if(image.slicePitch != (size_t)*(uint64_T*)mxGetData(mx_slice_pitch))
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidImportError", "The imported slice pitch of the DdsSlice differs from the expected slice pitch.");
+	}
+	memcpy(image.pixels, mxGetData(mx_pixels), image.slicePitch * sizeof(uint8_T));
+}
+
 DDS::DDS(const mxArray* mx_metadata, const mxArray* mx_images)
 {
-	// Import metadata first, then determine which Initialize function to use
+	if(mx_metadata == nullptr)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "NotEnoughInputsError", "Dds import metadata was unexpectedly empty.");
+	}
+	if(mx_images == nullptr)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "NotEnoughInputsError", "Dds import images was unexpectedly empty.");
+	}
 	DirectX::TexMetadata metadata = {};
 	ImportMetadata(mx_metadata, metadata);
 	this->_flags = (DWORD)*(uint32_T*)mxGetData(mxGetField(mx_metadata, 0, "Flags"));
@@ -177,6 +230,7 @@ mwIndex DDS::ComputeIndexMEX(size_t mip, size_t item, size_t slice)
 				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL, "ImageIndexError", "The requested item exceeds the number of items in the image array.");
 			}
 			ret = item + mip*metadata.arraySize;
+			break;
 		}
 		case DirectX::TEX_DIMENSION_TEXTURE3D:
 		{
@@ -208,6 +262,7 @@ mwIndex DDS::ComputeIndexMEX(size_t mip, size_t item, size_t slice)
 				
 				ret = index;
 			}
+			break;
 		}
 		default:
 		{
@@ -221,11 +276,11 @@ mxArray* DDS::ExportImages()
 {
 	mxArray* tmp,* mx_images;
 	mwIndex i, j, k, dst_idx;
-	const char* fieldnames[] = {"Width", "Height", "RowPitch", "SlicePitch", "Pixels"};
+	const char* fieldnames[] = {"Width", "Height", "RowPitch", "SlicePitch", "Pixels", "FormatID", "Flags"};
 	DirectX::TexMetadata metadata = this->GetMetadata();
 	size_t depth = metadata.depth;
 	
-	mx_images = mxCreateStructMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels, 5, fieldnames);
+	mx_images = mxCreateStructMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels, 7, fieldnames);
 	for(i = 0; i < metadata.mipLevels; i++)
 	{
 		for(j = 0; j < metadata.arraySize; j++)
@@ -238,6 +293,8 @@ mxArray* DDS::ExportImages()
 				MEXUtils::SetScalarField(mx_images, dst_idx, "Height", mxUINT64_CLASS, image->height);
 				MEXUtils::SetScalarField(mx_images, dst_idx, "RowPitch", mxUINT64_CLASS, image->rowPitch);
 				MEXUtils::SetScalarField(mx_images, dst_idx, "SlicePitch", mxUINT64_CLASS, image->slicePitch);
+				MEXUtils::SetScalarField(mx_images, dst_idx, "FormatID", mxUINT32_CLASS, image->format);
+				MEXUtils::SetScalarField(mx_images, dst_idx, "Flags", mxUINT32_CLASS, this->_flags);
 				tmp = mxCreateNumericMatrix(image->slicePitch, 1, mxUINT8_CLASS, mxREAL);
 				memcpy(mxGetData(tmp), image->pixels, image->slicePitch*sizeof(uint8_T));
 				mxSetField(mx_images, dst_idx, "Pixels", tmp);
@@ -522,6 +579,16 @@ DDS* DDSArray::AllocateDDSArray(size_t num, DDS* in)
 	return out;
 }
 
+DDS* DDSArray::AllocateDDSArray(size_t num)
+{
+	DDS* out = new(std::nothrow) DDS[num];
+	if(!out)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL|MEU_SEVERITY_SYSTEM, "MemoryAllocationError", "Could not allocate memory for DDS objects.");
+	}
+	return out;
+}
+
 DDS* DDSArray::AllocateDDSArray(size_t num, DWORD flags)
 {
 	size_t i;
@@ -540,10 +607,9 @@ DDS* DDSArray::AllocateDDSArray(size_t num, DWORD flags)
 	return out;
 }
 
-DDSArray DDSArray::ReadFile(int nrhs, const mxArray* prhs[])
+void DDSArray::ReadFile(int nrhs, const mxArray* prhs[])
 {
 	size_t i;
-	DDSArray dds_array;
 	DWORD flags = DirectX::CP_FLAGS_NONE;
 	wchar_t* filename;
 	
@@ -564,11 +630,14 @@ DDSArray DDSArray::ReadFile(int nrhs, const mxArray* prhs[])
 	
 	if(mxIsCell(mx_filenames))
 	{
-		dds_array = DDSArray(mxGetM(mx_filenames), mxGetN(mx_filenames), flags);
-		for(i = 0; i < dds_array._size; i++)
+		this->_sz_m = mxGetM(mx_filenames);
+		this->_sz_n = mxGetN(mx_filenames);
+		this->_size = this->_sz_m * this->_sz_n;
+		this->_arr  = AllocateDDSArray(this->_size, flags);
+		for(i = 0; i < this->_size; i++)
 		{
 			filename = ParseFilename(mxGetCell(mx_filenames, i));
-			hres = DirectX::LoadFromDDSFile(filename, flags, nullptr, dds_array.GetDDS(i));
+			hres = DirectX::LoadFromDDSFile(filename, flags, nullptr, this->_arr[i]);
 			if(FAILED(hres))
 			{
 				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER | MEU_SEVERITY_HRESULT, "FileReadError", "There was an error while reading the file.");
@@ -578,27 +647,94 @@ DDSArray DDSArray::ReadFile(int nrhs, const mxArray* prhs[])
 	}
 	else
 	{
-		dds_array = DDSArray(1, 1, flags);
+		this->_sz_m = 1;
+		this->_sz_n = 1;
+		this->_size = 1;
+		this->_arr  = AllocateDDSArray(this->_size, flags);
 		filename = ParseFilename(mx_filenames);
-		hres = DirectX::LoadFromDDSFile(filename, flags, nullptr, dds_array.GetDDS(0));
+		hres = DirectX::LoadFromDDSFile(filename, flags, nullptr, this->_arr[0]);
 		if(FAILED(hres))
 		{
 			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER | MEU_SEVERITY_HRESULT, "FileReadError", "There was an error while reading the file.");
 		}
 		mxFree(filename);
 	}
-	return dds_array;
 }
 
-DDSArray DDSArray::Import(const mxArray* in_struct)
+void DDSArray::Import(int nrhs, const mxArray* prhs[])
 {
 	size_t i;
-	DDSArray dds_array(mxGetM(in_struct), mxGetN(in_struct));
-	for(i = 0; i < dds_array._size; i++)
+	if(nrhs < 1)
 	{
-		dds_array.GetDDS(i) = DDS(mxGetField(in_struct, i, "Metadata"), mxGetField(in_struct, i, "Images"));
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "NotEnoughInputsError", "Not enough arguments. Please supply a Dds object.");
 	}
-	return dds_array;
+	
+	const mxArray* in_struct = prhs[0];
+	
+	if(!mxIsStruct(in_struct))
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidImportError", "Import object must be of class 'struct'.");
+	}
+	
+	if(mxIsEmpty(in_struct))
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidImportError", "Import object must not be empty.");
+	}
+	
+	this->_sz_m = mxGetM(in_struct);
+	this->_sz_n = mxGetN(in_struct);
+	this->_size = this->_sz_m * this->_sz_n;
+	this->_arr  = AllocateDDSArray(this->_size);
+	if(DDS::IsDDSImport(in_struct))
+	{
+		for(i = 0; i < this->_size; i++)
+		{
+			this->_arr[i] = DDS(mxGetField(in_struct, i, "Metadata"), mxGetField(in_struct, i, "Images"));
+		}
+	}
+	else if(DDS::IsDDSSliceImport(in_struct))
+	{
+		for(i = 0; i < this->_size; i++)
+		{
+			this->_arr[i] = DDS(mxGetField(in_struct, i, "Width"),
+			                    mxGetField(in_struct, i, "Height"),
+			                    mxGetField(in_struct, i, "RowPitch"),
+			                    mxGetField(in_struct, i, "SlicePitch"),
+			                    mxGetField(in_struct, i, "Pixels"),
+			                    mxGetField(in_struct, i, "FormatID"),
+			                    mxGetField(in_struct, i, "Flags"));
+		}
+	}
+	else
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidImportError", "The import object was invalid.");
+	}
+	
+}
+
+bool DDS::IsDDSImport(const mxArray* in)
+{
+	if(mxIsEmpty(in))
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidImportError", "Import object must not be empty.");
+	}
+	return (mxGetField(in, 0, "Metadata") != nullptr) &&
+	       (mxGetField(in, 0, "Images")   != nullptr);
+}
+
+bool DDS::IsDDSSliceImport(const mxArray* in)
+{
+	if(mxIsEmpty(in))
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidImportError", "Import object must not be empty.");
+	}
+	return (mxGetField(in, 0, "Width")      != nullptr) &&
+		  (mxGetField(in, 0, "Height")     != nullptr) &&
+		  (mxGetField(in, 0, "FormatID")   != nullptr) &&
+		  (mxGetField(in, 0, "RowPitch")   != nullptr) &&
+		  (mxGetField(in, 0, "SlicePitch") != nullptr) &&
+		  (mxGetField(in, 0, "Pixels")     != nullptr) &&
+	       (mxGetField(in, 0, "Flags")      != nullptr);
 }
 
 void DDSArray::ReadMetadata(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
@@ -947,4 +1083,25 @@ void DDSArray::ToExport(int nlhs, mxArray* plhs[])
 		mxSetField(out, i, "Images", this->GetDDS(i).ExportImages());
 	}
 	plhs[0] = out;
+}
+
+DDSArray::operation DDSArray::GetOperation(const mxArray* directive)
+{
+	DDSArray::operation op = NO_OP;
+	if(!mxIsChar(directive))
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidDirectiveError", "The supplied directive must be of class 'char'.");
+	}
+	char* directive_str = mxArrayToString(directive);
+	auto op_found = g_directive_map.find(directive_str);
+	if(op_found != g_directive_map.end())
+	{
+		op = op_found->second;
+	}
+	else
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidDirectiveError", "Unrecognized directive '%s'.", directive_str);
+	}
+	mxFree(directive_str);
+	return op;
 }

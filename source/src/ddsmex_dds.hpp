@@ -2,6 +2,7 @@
 
 #include "mex.h"
 #include "directxtex.h"
+#include <map>
 
 #define MEXF_IN  int nrhs, const mxArray* prhs[]
 #define MEXF_OUT int nlhs, mxArray* plhs[]
@@ -32,6 +33,7 @@ namespace DDSMEX
 	public:
 		DDS() : _flags(DirectX::CP_FLAGS_NONE) {};
 		explicit DDS(DWORD flags) : _flags(flags) {};
+		explicit DDS(const mxArray* mx_width, const mxArray* mx_height, const mxArray* mx_row_pitch, const mxArray* mx_slice_pitch, const mxArray* mx_pixels, const mxArray* mx_formatid, const mxArray* mx_flags);
 		DDS(const mxArray* mx_metadata, const mxArray* mx_images);  // MATLAB 'Dds' object -> MEX object
 		// Inherits:
 		// size_t      m_nimages;
@@ -39,6 +41,13 @@ namespace DDSMEX
 		// TexMetadata m_metadata;
 		// Image*      m_image;
 		// uint8_t*    m_memory;
+		
+		DDS& operator=(DDS&& in) noexcept
+		{
+			this->_flags = in._flags;
+			DirectX::ScratchImage::operator=(std::move(in));
+			return *this;
+		}
 		
 		void SetFlags(DWORD flags) {_flags = flags;}
 		DWORD GetFlags() {return _flags;}
@@ -49,6 +58,9 @@ namespace DDSMEX
 		mxArray* ExportImages();
 		static mxArray* ExportMetadata(const DirectX::TexMetadata& metadata);
 		static mxArray* ExportMetadata(const DirectX::TexMetadata& metadata, DWORD flags);
+		
+		static bool IsDDSImport(const mxArray* in);
+		static bool IsDDSSliceImport(const mxArray* in);
 		
 		void ToImage   (mxArray*& mx_dds_rgb);
 		void ToImage   (mxArray*& mx_dds_rgb, mxArray*& mx_dds_a);
@@ -76,12 +88,24 @@ namespace DDSMEX
 		DDSArray(size_t m, size_t n, DWORD flags = DirectX::CP_FLAGS_NONE);
 		~DDSArray() {delete[] _arr;}
 		
+		/* move */
+		DDSArray(DDSArray&& in) noexcept
+		{
+			this->_arr  = in._arr;
+			this->_sz_m = in._sz_m;
+			this->_sz_n = in._sz_n;
+			this->_size = in._size;
+		}
+		
 		/* assign */
 		DDSArray& operator=(const DDSArray& in) = default;
 		
-		/* static constructors */
-		static DDSArray ReadFile    (int nrhs, const mxArray* prhs[]);
-		static DDSArray Import      (const mxArray* in_struct);
+		/* move */
+		DDSArray& operator=(DDSArray&& in) = default;
+		
+		/* initializers */
+		void ReadFile    (MEXF_IN);
+		void Import      (MEXF_IN);
 		
 		void FlipRotate                  (MEXF_IN);
 		void Resize                      (MEXF_IN);
@@ -98,18 +122,45 @@ namespace DDSMEX
 		
 		void ToImage                     (MEXF_SIG);
 		void ToMatrix                    (MEXF_SIG);
+		
 		void ToExport                    (MEXF_OUT);
 		
 		static void ReadFile             (MEXF_SIG)
 		{
-			DDSArray::ReadFile(nrhs, prhs).ToExport(nlhs, plhs);
+			DDSArray dds_array;
+			dds_array.ReadFile(nrhs, prhs);
+			dds_array.ToExport(nlhs, plhs);
 		}
+		
 		static void ReadMetadata         (MEXF_SIG);
 		
 		static void ParseFlags(const mxArray* flags_array, BiMap& map, DWORD& flags);
 		static DXGI_FORMAT ParseFormat(const mxArray* mx_fmt);
 		
 		DDS& GetDDS(size_t idx) {return _arr[idx];}
+		
+		enum operation
+		{
+			NO_OP,
+			READ_FILE,
+			READ_META,
+			FLIP_ROTATE,
+			RESIZE,
+			CONVERT,
+			CONVERT_TO_SINGLE_PLANE,
+			GENERATE_MIPMAPS,
+			GENERATE_MIPMAPS_3D,
+			SCALE_MIPMAPS_ALPHA_FOR_COVERAGE,
+			PREMULTIPLY_ALPHA,
+			COMPRESS,
+			DECOMPRESS,
+			COMPUTE_NORMAL_MAP,
+			COMPUTE_MSE,
+			TO_IMAGE,
+			TO_MATRIX
+		};
+		
+		static DDSArray::operation GetOperation(const mxArray* directive);
 	
 	private:
 		DDS*          _arr;
@@ -117,9 +168,9 @@ namespace DDSMEX
 		size_t        _sz_n;
 		size_t        _size;
 		
-		
 		/* import helpers */
 		static wchar_t* ParseFilename(const mxArray* mx_filename);
+		static DDS*     AllocateDDSArray(size_t num);
 		static DDS*     AllocateDDSArray(size_t num, DDS* in);
 		static DDS*     AllocateDDSArray(size_t num, DWORD flags);
 	};
