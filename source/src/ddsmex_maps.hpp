@@ -72,6 +72,9 @@ namespace DDSMEX
 	extern BiMap g_ctrlflag_map;
 	extern BiMap g_filterflag_map;
 	extern BiMap g_frflag_map;
-	
+	extern BiMap g_pmflag_map;
+	extern BiMap g_compressflag_map;
+	extern BiMap g_cnflag_map;
+	extern BiMap g_cmseflag_map;
 }
 

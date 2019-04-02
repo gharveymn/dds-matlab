@@ -1,4 +1,4 @@
-classdef DdsSlice < handle
+classdef DdsSlice
     
 	% DirectXTex Image properties
 	

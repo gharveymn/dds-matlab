@@ -20,6 +20,7 @@ static std::map<std::string, DDSArray::operation> g_directive_map
 	{"PREMULTIPLY_ALPHA",                DDSArray::PREMULTIPLY_ALPHA               },
 	{"COMPRESS",                         DDSArray::COMPRESS                        },
 	{"DECOMPRESS",                       DDSArray::DECOMPRESS                      },
+	{"COPY_RECTANGLE",                   DDSArray::COPY_RECTANGLE                  },
 	{"COMPUTE_NORMAL_MAP",               DDSArray::COMPUTE_NORMAL_MAP              },
 	{"COMPUTE_MSE",                      DDSArray::COMPUTE_MSE                     },
 	{"TO_IMAGE",                         DDSArray::TO_IMAGE                        },
@@ -373,8 +374,6 @@ void DDS::FormMatrix(mxArray*& mx_dds_rgb, bool combine_alpha)
 {
 	mxArray* tmp_rgb;
 	size_t i, j, k;
-	DirectX::TexMetadata metadata = this->GetMetadata();
-	size_t depth = metadata.depth;
 	
 	if(this->GetImageCount() == 1)
 	{
@@ -382,6 +381,8 @@ void DDS::FormMatrix(mxArray*& mx_dds_rgb, bool combine_alpha)
 	}
 	else
 	{
+		DirectX::TexMetadata metadata = this->GetMetadata();
+		size_t depth = metadata.depth;
 		mx_dds_rgb = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
 		for(i = 0; i < metadata.mipLevels; i++)
 		{
@@ -405,8 +406,6 @@ void DDS::FormMatrix(mxArray*& mx_dds_rgb, mxArray*& mx_dds_a)
 {
 	mxArray* tmp_rgb,* tmp_a;
 	size_t i, j, k;
-	DirectX::TexMetadata metadata = this->GetMetadata();
-	size_t depth = metadata.depth;
 	
 	if(this->GetImageCount() == 1)
 	{
@@ -414,6 +413,8 @@ void DDS::FormMatrix(mxArray*& mx_dds_rgb, mxArray*& mx_dds_a)
 	}
 	else
 	{
+		DirectX::TexMetadata metadata = this->GetMetadata();
+		size_t depth = metadata.depth;
 		mx_dds_rgb = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
 		mx_dds_a = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
 		for(i = 0; i < metadata.mipLevels; i++)
@@ -685,14 +686,14 @@ void DDSArray::Import(int nrhs, const mxArray* prhs[])
 	this->_sz_n = mxGetN(in_struct);
 	this->_size = this->_sz_m * this->_sz_n;
 	this->_arr  = AllocateDDSArray(this->_size);
-	if(DDS::IsDDSImport(in_struct))
+	if(DDS::IsDdsImport(in_struct))
 	{
 		for(i = 0; i < this->_size; i++)
 		{
 			this->_arr[i] = DDS(mxGetField(in_struct, i, "Metadata"), mxGetField(in_struct, i, "Images"));
 		}
 	}
-	else if(DDS::IsDDSSliceImport(in_struct))
+	else if(DDS::IsDdsSliceImport(in_struct))
 	{
 		for(i = 0; i < this->_size; i++)
 		{
@@ -712,7 +713,7 @@ void DDSArray::Import(int nrhs, const mxArray* prhs[])
 	
 }
 
-bool DDS::IsDDSImport(const mxArray* in)
+bool DDS::IsDdsImport(const mxArray* in)
 {
 	if(mxIsEmpty(in))
 	{
@@ -722,7 +723,7 @@ bool DDS::IsDDSImport(const mxArray* in)
 	       (mxGetField(in, 0, "Images")   != nullptr);
 }
 
-bool DDS::IsDDSSliceImport(const mxArray* in)
+bool DDS::IsDdsSliceImport(const mxArray* in)
 {
 	if(mxIsEmpty(in))
 	{
@@ -786,17 +787,17 @@ wchar_t* DDSArray::ParseFilename(const mxArray* mx_filename)
 	return filename;
 }
 
-void DDSArray::ParseFlags(const mxArray* flags_array, BiMap &map, DWORD &flags)
+void DDSArray::ParseFlags(const mxArray* mx_flags, BiMap &map, DWORD &flags)
 {
 	mwIndex i;
 	mxArray* curr_flag;
 	
-	if(mxIsCell(flags_array))
+	if(mxIsCell(mx_flags))
 	{
-		mwSize num_flags = mxGetNumberOfElements(flags_array);
+		mwSize num_flags = mxGetNumberOfElements(mx_flags);
 		for(i = 0; i < num_flags; i++)
 		{
-			curr_flag = mxGetCell(flags_array, i);
+			curr_flag = mxGetCell(mx_flags, i);
 			if(!mxIsChar(curr_flag))
 			{
 				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputError", "Flags must be of type 'char'.");
@@ -816,10 +817,10 @@ void DDSArray::ParseFlags(const mxArray* flags_array, BiMap &map, DWORD &flags)
 			mxFree(flagname);
 		}
 	}
-	else if(mxIsChar(flags_array))
+	else if(mxIsChar(mx_flags))
 	{
-		MEXUtils::ToUpper((mxArray*)flags_array);
-		char* flagname = mxArrayToString(flags_array);
+		MEXUtils::ToUpper((mxArray*)mx_flags);
+		char* flagname = mxArrayToString(mx_flags);
 		auto found = map.find(flagname);
 		if(found != map.s_end())
 		{
@@ -868,11 +869,11 @@ void DDSArray::FlipRotate(MEXF_IN)
 	DWORD fr_flags = DirectX::TEX_FR_ROTATE0;
 	if(nrhs < 1)
 	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughInputsError", "Not enough arguments. Please supply a flag.");
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughArgumentsError", "Not enough arguments. Please supply a flag.");
 	}
 	else if(nrhs > 1)
 	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyInputsError", "Too many arguments.");
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
 	}
 	
 	DDSArray::ParseFlags(prhs[0], g_frflag_map, fr_flags);
@@ -891,28 +892,102 @@ void DDSArray::FlipRotate(MEXF_IN)
 	this->_arr = new_arr;
 }
 
+void DDSArray::Resize(MEXF_IN)
+{
+	size_t i;
+	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	size_t w, h;
+	DWORD filter_flags = DirectX::TEX_FILTER_DEFAULT;
+	if(nrhs < 1)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughArgumentsError", "No enough arguments. Please supply a size.");
+	}
+	if(nrhs > 3)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
+	}
+	
+	if(!mxIsDouble(prhs[0]))
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidSizeError", "Input size must be of class 'double'.");
+	}
+	
+	if(mxIsScalar(prhs[0]))
+	{
+		/* 2 scalar arguments with optional filter flag argument */
+		if(nrhs < 2)
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidSizeError", "Missing required width argument.");
+		}
+		h = mxGetScalar(prhs[0]);
+		
+		/* expect width as scalar*/
+		if(!mxIsDouble(prhs[1]) || !mxIsScalar(prhs[1]))
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidSizeError", "Input width must be a scalar double.");
+		}
+		w = mxGetScalar(prhs[1]);
+		if(nrhs > 2)
+		{
+			DDSArray::ParseFlags(prhs[2], g_filterflag_map, filter_flags);
+		}
+	}
+	else
+	{
+		/* 2 element vector with optional filter flag argument */
+		if(nrhs > 2)
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
+		}
+		if(mxGetNumberOfElements(prhs[0]) != 2)
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidSizeError", "Input size must have either 1 or 2 elements.");
+		}
+		auto data = (double*)mxGetData(prhs[0]);
+		h = (size_t)*(data);
+		w = (size_t)*(data + 1);
+		if(nrhs == 2)
+		{
+			DDSArray::ParseFlags(prhs[2], g_filterflag_map, filter_flags);
+		}
+	}
+	
+	for(i = 0; i < this->_size; i++)
+	{
+		DDS& pre_op  = this->GetDDS(i);
+		DDS& post_op = new_arr[i];
+		hres = DirectX::Resize(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), w, h, filter_flags, post_op);
+		if(FAILED(hres))
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ResizeError", "There was an error while resizing the image.");
+		}
+	}
+	delete[](this->_arr);
+	this->_arr = new_arr;
+}
+
 void DDSArray::Convert(MEXF_IN)
 {
 	size_t i;
 	DXGI_FORMAT fmt;
 	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
-	DWORD filter = DirectX::TEX_FILTER_DEFAULT;
+	DWORD filter_flags = DirectX::TEX_FILTER_DEFAULT;
 	float threshold = DirectX::TEX_THRESHOLD_DEFAULT;
 	if(nrhs < 1)
 	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughInputsError", "Not enough arguments. Please supply a format");
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughArgumentsError", "Not enough arguments. Please supply a format");
 	}
 	else if(nrhs > 3)
 	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyInputsError", "Too many arguments.");
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
 	}
 	
 	
-	fmt = ParseFormat(prhs[0]);
+	fmt = DDSArray::ParseFormat(prhs[0]);
 	
 	if(nrhs > 1)
 	{
-		ParseFlags(prhs[1], g_filterflag_map, filter);
+		DDSArray::ParseFlags(prhs[1], g_filterflag_map, filter_flags);
 	}
 	
 	if(nrhs > 2)
@@ -924,10 +999,245 @@ void DDSArray::Convert(MEXF_IN)
 	{
 		DDS& pre_op  = this->GetDDS(i);
 		DDS& post_op = new_arr[i];
-		hres = DirectX::Convert(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), fmt, filter, threshold, post_op);
+		hres = DirectX::Convert(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), fmt, filter_flags, threshold, post_op);
 		if(FAILED(hres))
 		{
-			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ConversionError", "There was an error converting the image.");
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ConvertError", "There was an error converting the image.");
+		}
+	}
+	delete[](this->_arr);
+	this->_arr = new_arr;
+}
+
+void DDSArray::ConvertToSinglePlane(MEXF_IN)
+{
+	size_t i;
+	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	if(nrhs > 0)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
+	}
+	
+	for(i = 0; i < this->_size; i++)
+	{
+		DDS& pre_op  = this->GetDDS(i);
+		DDS& post_op = new_arr[i];
+		hres = DirectX::ConvertToSinglePlane(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), post_op);
+		if(FAILED(hres))
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ConvertToSinglePlaneError", "There was an error converting the image to a single plane.");
+		}
+	}
+	delete[](this->_arr);
+	this->_arr = new_arr;
+}
+
+void DDSArray::GenerateMipMaps(MEXF_IN)
+{
+	size_t i;
+	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	size_t levels = 0;
+	DWORD filter_flags = DirectX::TEX_FILTER_DEFAULT;
+	if(nrhs > 2)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
+	}
+	
+	if(nrhs > 0)
+	{
+		if(mxIsDouble(prhs[0]))
+		{
+			if(!mxIsScalar(prhs[0]))
+			{
+				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidInputError", "The number of levels must be scalar.");
+			}
+			levels = mxGetScalar(prhs[0]);
+			if(nrhs > 1)
+			{
+				DDSArray::ParseFlags(prhs[1], g_filterflag_map, filter_flags);
+			}
+		}
+		else if(mxIsChar(prhs[0]))
+		{
+			if(nrhs > 1)
+			{
+				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Filter flags must be the last argument.");
+			}
+			DDSArray::ParseFlags(prhs[1], g_filterflag_map, filter_flags);
+		}
+		else
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidInputError", "The first argument must either be of class 'double' or class 'char'.");
+		}
+	}
+	
+	for(i = 0; i < this->_size; i++)
+	{
+		DDS& pre_op  = this->GetDDS(i);
+		DDS& post_op = new_arr[i];
+		switch(pre_op.GetMetadata().dimension)
+		{
+			case DirectX::TEX_DIMENSION_TEXTURE1D:
+			case DirectX::TEX_DIMENSION_TEXTURE2D:
+			{
+				hres = DirectX::GenerateMipMaps(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), filter_flags, levels, post_op);
+				if(FAILED(hres))
+				{
+					MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "GenerateMipMipsError", "There was an error converting the image.");
+				}
+			}
+			case DirectX::TEX_DIMENSION_TEXTURE3D:
+			{
+				hres = DirectX::GenerateMipMaps3D(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), filter_flags, levels, post_op);
+				if(FAILED(hres))
+				{
+					MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "GenerateMipMips3DError", "There was an error converting the image.");
+				}
+				break;
+			}
+			default:
+			{
+				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL, "ImageDimensionError", "The image was of unexpected dimensionality (%d).", pre_op.GetMetadata().dimension - 1);
+			}
+		}
+	}
+	delete[](this->_arr);
+	this->_arr = new_arr;
+}
+
+void DDSArray::ScaleMipMapsAlphaForCoverage(MEXF_IN)
+{
+	size_t i, j;
+	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	float alpha_ref = DirectX::TEX_THRESHOLD_DEFAULT;
+	if(nrhs > 1)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
+	}
+	
+	if(nrhs == 1)
+	{
+		if(!mxIsDouble(prhs[0]) || !mxIsScalar(prhs[0]))
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidSizeError", "Reference alpha level must be a scalar double.");
+		}
+		
+		alpha_ref = mxGetScalar(prhs[0]);
+		
+		if(alpha_ref < 0 || alpha_ref > 1)
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidSizeError", "Reference alpha level must be between 0 and 1.");
+		}
+	}
+	
+	for(i = 0; i < this->_size; i++)
+	{
+		DDS& pre_op  = this->GetDDS(i);
+		DDS& post_op = new_arr[i];
+		const DirectX::TexMetadata& metadata = pre_op.GetMetadata();
+		for(j = 0; j < metadata.mipLevels; j++)
+		{
+			const DirectX::Image* image = pre_op.GetImage(0, j, 0);
+			hres = DirectX::ScaleMipMapsAlphaForCoverage(image, metadata.mipLevels, metadata, j, alpha_ref, post_op);
+			if(FAILED(hres))
+			{
+				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ScaleMipMapsAlphaForCoverageError", "There was an error while scaling the mipmaps alpha for coverage.");
+			}
+		}
+	}
+	delete[](this->_arr);
+	this->_arr = new_arr;
+}
+
+void DDSArray::PremultiplyAlpha(MEXF_IN)
+{
+	size_t i;
+	DXGI_FORMAT fmt;
+	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	DWORD pmalpha_flags = DirectX::TEX_PMALPHA_DEFAULT;
+	float threshold = DirectX::TEX_THRESHOLD_DEFAULT;
+	if(nrhs > 1)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
+	}
+	
+	if(nrhs == 1)
+	{
+		DDSArray::ParseFlags(prhs[0], g_pmflag_map, pmalpha_flags);
+	}
+	
+	for(i = 0; i < this->_size; i++)
+	{
+		DDS& pre_op  = this->GetDDS(i);
+		DDS& post_op = new_arr[i];
+		hres = DirectX::PremultiplyAlpha(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), pmalpha_flags, post_op);
+		if(FAILED(hres))
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ConvertError", "There was an error converting the image.");
+		}
+	}
+	delete[](this->_arr);
+	this->_arr = new_arr;
+}
+
+void DDSArray::Compress(MEXF_IN)
+{
+	size_t i;
+	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	DXGI_FORMAT fmt = DXGI_FORMAT_UNKNOWN;
+	DWORD compress_flags  = DirectX::TEX_COMPRESS_DEFAULT;
+	float threshold = DirectX::TEX_THRESHOLD_DEFAULT;
+	if(nrhs < 1)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughArgumentsError", "No enough arguments. Please supply a format.");
+	}
+	if(nrhs > 3)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
+	}
+	
+	fmt = DDSArray::ParseFormat(prhs[0]);
+	
+	if(nrhs > 1)
+	{
+		if(mxIsChar(prhs[1]))
+		{
+			DDSArray::ParseFlags(prhs[1], g_compressflag_map, compress_flags);
+			if(nrhs > 2)
+			{
+				if(!mxIsScalar(prhs[2]))
+				{
+					MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidInputError", "The alpha threshold must be scalar.");
+				}
+				threshold = mxGetScalar(prhs[2]);
+			}
+		}
+		else if(mxIsDouble(prhs[1]))
+		{
+			if(nrhs > 1)
+			{
+				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "The alpha threshold must be the last argument.");
+			}
+			if(!mxIsScalar(prhs[1]))
+			{
+				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidInputError", "The alpha threshold must be scalar.");
+			}
+			threshold = mxGetScalar(prhs[1]);
+		}
+		else
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidInputError", "The optional second argument must either be of class 'double' or class 'char'.");
+		}
+	}
+	
+	for(i = 0; i < this->_size; i++)
+	{
+		DDS& pre_op  = this->GetDDS(i);
+		DDS& post_op = new_arr[i];
+		hres = DirectX::Compress(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), fmt, compress_flags, threshold, post_op);
+		if(FAILED(hres))
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "DecompressError", "There was an error while decompressing the image.");
 		}
 	}
 	delete[](this->_arr);
@@ -941,7 +1251,7 @@ void DDSArray::Decompress(MEXF_IN)
 	DXGI_FORMAT fmt = DXGI_FORMAT_UNKNOWN;
 	if(nrhs > 1)
 	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyInputsError", "Too many arguments.");
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
 	}
 	
 	if(nrhs == 1)
@@ -961,6 +1271,271 @@ void DDSArray::Decompress(MEXF_IN)
 	}
 	delete[](this->_arr);
 	this->_arr = new_arr;
+}
+
+void DDSArray::ComputeNormalMap(MEXF_IN)
+{
+	size_t i;
+	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	DXGI_FORMAT fmt;
+	float amplitude;
+	DWORD cn_flags  = DirectX::CNMAP_DEFAULT;
+	if(nrhs < 2)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughArgumentsError", "No enough arguments. Please supply a format and an amplitude.");
+	}
+	if(nrhs > 3)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
+	}
+	
+	fmt = DDSArray::ParseFormat(prhs[0]);
+	
+	if(!mxIsDouble(prhs[1]) || !mxIsScalar(prhs[1]))
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidSizeError", "Amplitude must be a scalar double.");
+	}
+	amplitude = mxGetScalar(prhs[1]);
+	
+	if(nrhs == 3)
+	{
+		DDSArray::ParseFlags(prhs[2], g_cnflag_map, cn_flags);
+	}
+	
+	for(i = 0; i < this->_size; i++)
+	{
+		DDS& pre_op  = this->GetDDS(i);
+		DDS& post_op = new_arr[i];
+		hres = DirectX::ComputeNormalMap(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), cn_flags, amplitude, fmt, post_op);
+		if(FAILED(hres))
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "DecompressError", "There was an error while decompressing the image.");
+		}
+	}
+	delete[](this->_arr);
+	this->_arr = new_arr;
+}
+
+void DDSArray::CopyRectangle(DDSArray& src, DDSArray& dst, MEXF_IN)
+{
+	size_t i, j;
+	DWORD filter_flags  = DirectX::TEX_FILTER_DEFAULT;
+	size_t out_x;
+	size_t out_y;
+	if(nrhs < 1)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughArgumentsError", "No enough arguments. Please supply a 4-element vector specifying the rectangle to copy, and "
+															"a 2-element vector specifying its destination coordinates.");
+	}
+	if(nrhs > 3)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
+	}
+	
+	if(!mxIsDouble(prhs[0]) || mxGetNumberOfElements(prhs[0]) != 4)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidSizeError", "The rectangle specifier must be of class 'double' and have 4 elements.");
+	}
+	auto data = (double*)mxGetData(prhs[0]);
+	const DirectX::Rect rect((size_t)data[1], (size_t)data[0], (size_t)data[3], (size_t)data[2]);
+	
+	if(!mxIsDouble(prhs[1]) || mxGetNumberOfElements(prhs[1]) != 2)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidSizeError", "The destination specifier must be of class 'double' and have 2 elements.");
+	}
+	data = (double*)mxGetData(prhs[0]);
+	out_x = (size_t)data[1];
+	out_y = (size_t)data[0];
+	
+	if(nrhs == 3)
+	{
+		DDSArray::ParseFlags(prhs[2], g_filterflag_map, filter_flags);
+	}
+	
+	if(src._size != dst._size)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputMismatchError", "The source and destination arguments are not the same size.");
+	}
+	
+	for(i = 0; i < src._size; i++)
+	{
+		DDS& pre_op  = src.GetDDS(i);
+		DDS& post_op = dst.GetDDS(i);
+		
+		if(pre_op.GetImageCount() != post_op.GetImageCount())
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputMismatchError", "The source and destination arguments are not the same size.");
+		}
+		
+		auto pre_op_imgs  = pre_op.GetImages();
+		auto post_op_imgs = post_op.GetImages();
+		for(j = 0; j < pre_op.GetImageCount(); j++)
+		{
+			hres = DirectX::CopyRectangle(*(pre_op_imgs + j), rect, *(post_op_imgs + j), filter_flags, out_x, out_y);
+			if(FAILED(hres))
+			{
+				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "DecompressError", "There was an error while decompressing the image.");
+			}
+		}
+	}
+}
+
+void DDSArray::ComputeMSE(DDSArray& ddsarray1, DDSArray& ddsarray2, MEXF_SIG)
+{
+	size_t i;
+	DWORD cmse_flags = DirectX::CMSE_DEFAULT;
+	if(nrhs > 1)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
+	}
+	
+	if(nrhs == 1)
+	{
+		DDSArray::ParseFlags(prhs[2], g_cmseflag_map, cmse_flags);
+	}
+	
+	if(ddsarray1._size != ddsarray2._size)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputMismatchError", "The comparison arguments are not the same size.");
+	}
+	
+	if(ddsarray1._size == 1)
+	{
+		if(nlhs > 1)
+		{
+			mxArray* tmp[2];
+			plhs[0] = mxCreateCellMatrix(ddsarray1.GetM(), ddsarray1.GetN());
+			plhs[1] = mxCreateCellMatrix(ddsarray1.GetM(), ddsarray1.GetN());
+			for(i = 0; i < ddsarray1.GetSize(); i++)
+			{
+				DDSArray::ComputeMSE(ddsarray1.GetDDS(i), ddsarray2.GetDDS(i), cmse_flags, tmp[0], tmp[1]);
+				mxSetCell(plhs[0], i, tmp[0]);
+				mxSetCell(plhs[1], i, tmp[1]);
+			}
+		}
+		else
+		{
+			mxArray* tmp;
+			plhs[0] = mxCreateCellMatrix(ddsarray1.GetM(), ddsarray1.GetN());
+			for(i = 0; i < ddsarray1.GetSize(); i++)
+			{
+				DDSArray::ComputeMSE(ddsarray1.GetDDS(i), ddsarray2.GetDDS(i), cmse_flags, tmp);
+				mxSetCell(plhs[0], i, tmp);
+			}
+		}
+	}
+	else
+	{
+		if(nlhs > 1)
+		{
+			DDSArray::ComputeMSE(ddsarray1.GetDDS(0), ddsarray2.GetDDS(0), cmse_flags, plhs[0], plhs[1]);
+		}
+		else
+		{
+			DDSArray::ComputeMSE(ddsarray1.GetDDS(0), ddsarray2.GetDDS(0), cmse_flags, plhs[0]);
+		}
+	}
+}
+
+void DDSArray::ComputeMSE(DDS& dds1, DDS& dds2, DWORD cmse_flags, mxArray*& mx_dds_mse, mxArray*& mx_dds_mseV)
+{
+	int i, j, k;
+	mxArray* tmp_mse,* tmp_mseV;
+	if(dds1.GetImageCount() != dds2.GetImageCount())
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputMismatchError", "The source and destination arguments are not the same size.");
+	}
+	if(dds1.GetImageCount() == 1)
+	{
+		DDSArray::ComputeMSE(dds1.GetImage(0, 0, 0), dds2.GetImage(0, 0, 0), cmse_flags, mx_dds_mse, mx_dds_mseV);
+	}
+	else
+	{
+		DirectX::TexMetadata metadata = dds1.GetMetadata();
+		size_t depth = metadata.depth;
+		mx_dds_mse = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
+		mx_dds_mseV = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
+		for(i = 0; i < metadata.mipLevels; i++)
+		{
+			for(j = 0; j < metadata.arraySize; j++)
+			{
+				for(k = 0; k < depth; k++)
+				{
+					DDSArray::ComputeMSE(dds1.GetImage(i, j, k), dds2.GetImage(i, j, k), cmse_flags, tmp_mse, tmp_mseV);
+					mxSetCell(mx_dds_mse,  dds1.ComputeIndexMEX(i, j, k), tmp_mse);
+					mxSetCell(mx_dds_mseV, dds1.ComputeIndexMEX(i, j, k), tmp_mseV);
+				}
+			}
+			if(depth > 1)
+			{
+				depth >>= 1u;
+			}
+		}
+	}
+}
+
+void DDSArray::ComputeMSE(DDS& dds1, DDS& dds2, DWORD cmse_flags, mxArray*& mx_dds_mse)
+{
+	int i, j, k;
+	mxArray* tmp_mse;
+	if(dds1.GetImageCount() != dds2.GetImageCount())
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputMismatchError", "The source and destination arguments are not the same size.");
+	}
+	if(dds1.GetImageCount() == 1)
+	{
+		DDSArray::ComputeMSE(dds1.GetImage(0, 0, 0), dds2.GetImage(0, 0, 0), cmse_flags, mx_dds_mse);
+	}
+	else
+	{
+		DirectX::TexMetadata metadata = dds1.GetMetadata();
+		size_t depth = metadata.depth;
+		mx_dds_mse = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
+		for(i = 0; i < metadata.mipLevels; i++)
+		{
+			for(j = 0; j < metadata.arraySize; j++)
+			{
+				for(k = 0; k < depth; k++)
+				{
+					DDSArray::ComputeMSE(dds1.GetImage(i, j, k), dds2.GetImage(i, j, k), cmse_flags, tmp_mse);
+					mxSetCell(mx_dds_mse,  dds1.ComputeIndexMEX(i, j, k), tmp_mse);
+				}
+			}
+			if(depth > 1)
+			{
+				depth >>= 1u;
+			}
+		}
+	}
+}
+
+void DDSArray::ComputeMSE(const DirectX::Image* img1, const DirectX::Image* img2, DWORD cmse_flags, mxArray*& mx_ddsslice_mse)
+{
+	float mse;
+	hres = DirectX::ComputeMSE(*img1, *img2, mse, nullptr, cmse_flags);
+	if(FAILED(hres))
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ComputeMSEError", "There was an error while computing the mean-squared error.");
+	}
+	mx_ddsslice_mse = mxCreateDoubleScalar(mse);
+}
+
+void DDSArray::ComputeMSE(const DirectX::Image* img1, const DirectX::Image* img2, DWORD cmse_flags, mxArray*& mx_ddsslice_mse, mxArray*& mx_ddsslice_mseV)
+{
+	float mse;
+	float mseV[4];
+	hres = DirectX::ComputeMSE(*img1, *img2, mse, mseV, cmse_flags);
+	if(FAILED(hres))
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ComputeMSEError", "There was an error while computing the mean-squared error.");
+	}
+	mx_ddsslice_mse = mxCreateDoubleScalar(mse);
+	mx_ddsslice_mseV = mxCreateDoubleMatrix(4, 1, mxREAL);
+	auto data = mxGetDoubles(mx_ddsslice_mseV);
+	data[0] = mseV[0];
+	data[1] = mseV[1];
+	data[2] = mseV[2];
+	data[3] = mseV[3];
 }
 
 void DDSArray::ToImage(MEXF_SIG)
@@ -985,10 +1560,10 @@ void DDSArray::ToImage(MEXF_SIG)
 			plhs[1] = mxCreateCellMatrix(this->_sz_m, this->_sz_n);
 			for(i = 0; i < this->_size; i++)
 			{
-				mxArray* tmp0, * tmp1;
-				this->_arr[i].ToImage(tmp0, tmp1);
-				mxSetCell(plhs[0], i, tmp0);
-				mxSetCell(plhs[1], i, tmp1);
+				mxArray* tmp[2];
+				this->_arr[i].ToImage(tmp[0], tmp[1]);
+				mxSetCell(plhs[0], i, tmp[0]);
+				mxSetCell(plhs[1], i, tmp[1]);
 			}
 		}
 		else
@@ -1011,7 +1586,7 @@ void DDSArray::ToMatrix(MEXF_SIG)
 	bool combine_alpha = false;
 	if(nrhs > 1)
 	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyInputsError", "Too many arguments.");
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
 	}
 	
 	if(nrhs == 1)
@@ -1050,10 +1625,10 @@ void DDSArray::ToMatrix(MEXF_SIG)
 			plhs[1] = mxCreateCellMatrix(this->_sz_m, this->_sz_n);
 			for(i = 0; i < this->_size; i++)
 			{
-				mxArray* tmp0,* tmp1;
-				this->_arr[i].ToMatrix(tmp0, tmp1);
-				mxSetCell(plhs[0], i, tmp0);
-				mxSetCell(plhs[1], i, tmp1);
+				mxArray* tmp[2];
+				this->_arr[i].ToMatrix(tmp[0], tmp[1]);
+				mxSetCell(plhs[0], i, tmp[0]);
+				mxSetCell(plhs[1], i, tmp[1]);
 			}
 			
 			

@@ -55,6 +55,7 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		case DDSArray::COMPRESS:
 		case DDSArray::DECOMPRESS:
 		case DDSArray::COMPUTE_NORMAL_MAP:
+		case DDSArray::COPY_RECTANGLE:
 		case DDSArray::COMPUTE_MSE:
 		case DDSArray::TO_IMAGE:
 		case DDSArray::TO_MATRIX:
@@ -77,21 +78,51 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		case DDSArray::TO_IMAGE:
 		{
 			dds_array.ToImage(nlhs, plhs, num_options, options);
-			return;
+			return; // EARLY RETURN
 		}
 		case DDSArray::TO_MATRIX:
 		{
 			dds_array.ToMatrix(nlhs, plhs, num_options, options);
-			return;
+			return; // EARLY RETURN
+		}
+		case DDSArray::FLIP_ROTATE:
+		{
+			dds_array.FlipRotate(num_options, options);
+			break;
+		}
+		case DDSArray::RESIZE:
+		{
+			dds_array.Resize(num_options, options);
+			break;
 		}
 		case DDSArray::CONVERT:
 		{
 			dds_array.Convert(num_options, options);
 			break;
 		}
-		case DDSArray::FLIP_ROTATE:
+		case DDSArray::CONVERT_TO_SINGLE_PLANE:
 		{
-			dds_array.FlipRotate(num_options, options);
+			dds_array.ConvertToSinglePlane(num_options, options);
+			break;
+		}
+		case DDSArray::GENERATE_MIPMAPS:
+		{
+			dds_array.GenerateMipMaps(num_options, options);
+			break;
+		}
+		case DDSArray::SCALE_MIPMAPS_ALPHA_FOR_COVERAGE:
+		{
+			dds_array.ScaleMipMapsAlphaForCoverage(num_options, options);
+			break;
+		}
+		case DDSArray::PREMULTIPLY_ALPHA:
+		{
+			dds_array.PremultiplyAlpha(num_options, options);
+			break;
+		}
+		case DDSArray::COMPRESS:
+		{
+			dds_array.Compress(num_options, options);
 			break;
 		}
 		case DDSArray::DECOMPRESS:
@@ -99,9 +130,38 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 			dds_array.Decompress(num_options, options);
 			break;
 		}
+		case DDSArray::COMPUTE_NORMAL_MAP:
+		{
+			dds_array.ComputeNormalMap(num_options, options);
+			break;
+		}
+		case DDSArray::COPY_RECTANGLE:
+		{
+			DDSArray dds_dst;
+			if(num_options < 1)
+			{
+				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughArgumentsError", "Not enough arguments. Please supply a destination image.");
+			}
+			dds_dst.Import(num_options, options);
+			DDSArray::CopyRectangle(dds_array, dds_dst, num_options-1, options+1);
+			dds_array = dds_dst;
+			break;
+		}
+		case DDSArray::COMPUTE_MSE:
+		{
+			DDSArray dds_cmp;
+			if(num_options < 1)
+			{
+				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughArgumentsError", "Not enough arguments. Please supply a comparison image.");
+			}
+			dds_cmp.Import(num_options, options);
+			DDSArray::ComputeMSE(dds_array, dds_cmp, nlhs, plhs, num_options, options);
+			return; // EARLY RETURN
+		}
 		default:
 		{
 			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidDirectiveError", "The directive supplied does not correspond to an operation.");
+			break;
 		}
 	}
 	

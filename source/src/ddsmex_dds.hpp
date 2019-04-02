@@ -59,8 +59,8 @@ namespace DDSMEX
 		static mxArray* ExportMetadata(const DirectX::TexMetadata& metadata);
 		static mxArray* ExportMetadata(const DirectX::TexMetadata& metadata, DWORD flags);
 		
-		static bool IsDDSImport(const mxArray* in);
-		static bool IsDDSSliceImport(const mxArray* in);
+		static bool IsDdsImport(const mxArray* in);
+		static bool IsDdsSliceImport(const mxArray* in);
 		
 		void ToImage   (mxArray*& mx_dds_rgb);
 		void ToImage   (mxArray*& mx_dds_rgb, mxArray*& mx_dds_a);
@@ -78,7 +78,7 @@ namespace DDSMEX
 		void FormMatrix(mxArray*& mx_dds_rgb, bool combine_alpha = false);
 		void FormMatrix(mxArray*& mx_dds_rgb, mxArray*& mx_dds_a);
 		void FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, bool combine_alpha);
-		void FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, mxArray*& mx_ddsslice_a);
+		void FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, mxArray*& mx_ddsslice_a)
 	};
 	
 	class DDSArray
@@ -112,13 +112,16 @@ namespace DDSMEX
 		void Convert                     (MEXF_IN);
 		void ConvertToSinglePlane        (MEXF_IN);
 		void GenerateMipMaps             (MEXF_IN);
-		void GenerateMipMaps3D           (MEXF_IN);
+		// void GenerateMipMaps3D           (MEXF_IN);
 		void ScaleMipMapsAlphaForCoverage(MEXF_IN);
 		void PremultiplyAlpha            (MEXF_IN);
 		void Compress                    (MEXF_IN);
 		void Decompress                  (MEXF_IN);
 		void ComputeNormalMap            (MEXF_IN);
-		void ComputeMSE                  (MEXF_IN);
+		
+		
+		static void CopyRectangle               (DDSArray& src, DDSArray& dst, MEXF_IN);
+		static void ComputeMSE                  (DDSArray& ddsarray1, DDSArray& ddsarray2, MEXF_SIG);
 		
 		void ToImage                     (MEXF_SIG);
 		void ToMatrix                    (MEXF_SIG);
@@ -134,10 +137,13 @@ namespace DDSMEX
 		
 		static void ReadMetadata         (MEXF_SIG);
 		
-		static void ParseFlags(const mxArray* flags_array, BiMap& map, DWORD& flags);
+		static void ParseFlags(const mxArray* mx_flags, BiMap &map, DWORD &flags);
 		static DXGI_FORMAT ParseFormat(const mxArray* mx_fmt);
 		
 		DDS& GetDDS(size_t idx) {return _arr[idx];}
+		size_t GetSize() {return _size;}
+		size_t GetM() {return _sz_m;}
+		size_t GetN() {return _sz_n;}
 		
 		enum operation
 		{
@@ -155,6 +161,7 @@ namespace DDSMEX
 			COMPRESS,
 			DECOMPRESS,
 			COMPUTE_NORMAL_MAP,
+			COPY_RECTANGLE,
 			COMPUTE_MSE,
 			TO_IMAGE,
 			TO_MATRIX
@@ -173,5 +180,9 @@ namespace DDSMEX
 		static DDS*     AllocateDDSArray(size_t num);
 		static DDS*     AllocateDDSArray(size_t num, DDS* in);
 		static DDS*     AllocateDDSArray(size_t num, DWORD flags);
+		static void     ComputeMSE(DDS& dds1, DDS& dds2, DWORD cmse_flags, mxArray*& mx_dds_mse);
+		static void     ComputeMSE(DDS& dds1, DDS& dds2, DWORD cmse_flags, mxArray*& mx_dds_mse, mxArray*& mx_dds_mseV);
+		static void     ComputeMSE(const DirectX::Image* img1, const DirectX::Image* img2, DWORD cmse_flags, mxArray*& mx_ddsslice_mse);
+		static void     ComputeMSE(const DirectX::Image* img1, const DirectX::Image* img2, DWORD cmse_flags, mxArray*& mx_ddsslice_mse, mxArray*& mx_ddsslice_mseV);
 	};
 }

@@ -1,4 +1,4 @@
-classdef Dds < handle
+classdef Dds
 	%DDS Summary of this class goes here
 	%   Detailed explanation goes here
 	
