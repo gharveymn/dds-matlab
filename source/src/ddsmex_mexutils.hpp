@@ -1,6 +1,6 @@
 #pragma once
 
-namespace DDSMex
+namespace DDSMEX
 {
 	namespace MEXUtils
 	{
@@ -8,10 +8,15 @@ namespace DDSMex
 		
 		void ToLower(mxArray* mx_str);
 		
-		bool CompareString(const mxArray* mx_arr, const char cmpstr[]);
+		bool CompareMEXString(const mxArray* mx_arr, const char* cmpstr);
 		
 		template<class T>
-		void SetScalarField(mxArray* mx_struct, mwIndex idx, const char* field, mxClassID classid, T data);
+		void SetScalarField(mxArray* mx_struct, mwIndex idx, const char* field, mxClassID classid, T data)
+		{
+			mxArray* scalar = mxCreateNumericMatrix(1, 1, classid, mxREAL);
+			*(T*)mxGetData(scalar) = data;
+			mxSetField(mx_struct, idx, field, scalar);
+		}
 	}
 }
 

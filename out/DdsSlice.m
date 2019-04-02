@@ -42,7 +42,7 @@ classdef DdsSlice
 		
 		function varargout = toimage(obj)
 			nout = max(nargout,1);
-			[varargout{1:nout}] = ddsmex('IMAGE_MATRIX', struct(obj));
+			[varargout{1:nout}] = ddsmex('TOIMAGE', struct(obj));
 		end
 		
 		function newdds = convert(obj, varargin)
@@ -50,11 +50,11 @@ classdef DdsSlice
 		end
 		
 		function newdds = flip(obj, flags)
-			newdds = Dds(ddsmex('FLIP_ROTATE', struct(obj), flags));
+			newdds = Dds(ddsmex('FLIPROTATE', struct(obj), flags));
 		end
 		
 		function newdds = rotate(obj, flags)
-			newdds = Dds(ddsmex('FLIP_ROTATE', struct(obj), flags));
+			newdds = Dds(ddsmex('FLIPROTATE', struct(obj), flags));
 		end
 		
 		function newdds = decompress(obj,fmt)

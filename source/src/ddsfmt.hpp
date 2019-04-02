@@ -5,7 +5,7 @@
 #define MAX_CHANNELS 4
 #define MAX_CHANNEL_NAME_LEN 16
 
-namespace DDSMex
+namespace DDSMEX
 {
 	
 	class DXGIPixels

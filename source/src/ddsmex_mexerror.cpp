@@ -50,6 +50,12 @@ HRESULT hres = 0;
 
 #define MEU_WARN_MESSAGE_FORMAT "%." EXPAND_AS_STRING(MEU_ERROR_STRING_SIZE)"s%." EXPAND_AS_STRING(MEU_MATLAB_HELP_MESSAGE_SIZE)"s"
 
+void (*MEXError::error_callback)(unsigned int) = nullptr;
+void (*MEXError::warning_callback)() = nullptr;
+
+const char* MEXError::error_help_message = "";
+const char* MEXError::warning_help_message = "";
+
 namespace
 {
 	/**

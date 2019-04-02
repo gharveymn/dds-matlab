@@ -21,7 +21,10 @@ function INSTALL
 	
 	sources = {
 		'ddsmex.cpp',...
-		'mlerrorutils.cpp'
+		'ddsmex_mexerror.cpp',...
+		'ddsmex_mexutils.cpp',...
+		'ddsmex_dds.cpp',...
+		'ddsmex_maps.cpp'
 		};
 
 	for i = 1:numel(sources)
@@ -43,7 +46,7 @@ function INSTALL
 % 	end
 
 	fprintf('-Compiling ddsmex...')
-	mexflags = [mexflags {'COMPFLAGS="$COMPFLAGS -Wall"'}];
+	% mexflags = [mexflags {'COMPFLAGS="$COMPFLAGS -Wall"'}];
 	% mexflags = [mexflags {'CFLAGS="$CFLAGS -Wall -Werror -Wno-unused-function"'}];
 	mex(mexflags{:} , sources{:})
 	fprintf(' successful.\n')

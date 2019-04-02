@@ -4,7 +4,7 @@
 #include "mex.h"
 #include "ddsmex_mexutils.hpp"
 
-void DDSMex::MEXUtils::ToUpper(mxArray* mx_str)
+void DDSMEX::MEXUtils::ToUpper(mxArray* mx_str)
 {
 	size_t i;
 	size_t n = mxGetNumberOfElements(mx_str);
@@ -12,11 +12,10 @@ void DDSMex::MEXUtils::ToUpper(mxArray* mx_str)
 	for(i = 0; i < n; i++)
 	{
 		*(data + i) = (mxChar)toupper(*(data + i));
-		
 	}
 }
 
-void DDSMex::MEXUtils::ToLower(mxArray* mx_str)
+void DDSMEX::MEXUtils::ToLower(mxArray* mx_str)
 {
 	size_t i;
 	size_t n = mxGetNumberOfElements(mx_str);
@@ -28,7 +27,7 @@ void DDSMex::MEXUtils::ToLower(mxArray* mx_str)
 	}
 }
 
-bool DDSMex::MEXUtils::CompareString(const mxArray* mx_arr, const char cmpstr[])
+bool DDSMEX::MEXUtils::CompareMEXString(const mxArray* mx_arr, const char* cmpstr)
 {
 	mwIndex i;
 	mxChar* mx_str = mxGetChars(mx_arr);
@@ -45,14 +44,5 @@ bool DDSMex::MEXUtils::CompareString(const mxArray* mx_arr, const char cmpstr[])
 		}
 	}
 	return true;
-}
-
-
-template<class T>
-void DDSMex::MEXUtils::SetScalarField(mxArray* mx_struct, mwIndex idx, const char* field, mxClassID classid, T data)
-{
-	mxArray* scalar = mxCreateNumericMatrix(1, 1, classid, mxREAL);
-	*(T*)mxGetData(scalar) = data;
-	mxSetField(mx_struct, idx, field, scalar);
 }
 

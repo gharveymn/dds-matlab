@@ -3,9 +3,11 @@
 #include "mex.h"
 #include "directxtex.h"
 
-#define MEXFUNCTION_SIGNATURE int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]
+#define MEXF_IN  int nrhs, const mxArray* prhs[]
+#define MEXF_OUT int nlhs, mxArray* plhs[]
+#define MEXF_SIG MEXF_OUT, MEXF_IN
 
-namespace DDSMex
+namespace DDSMEX
 {
 	// Read                            | DONE
 	// ReadMetadata                    | DONE
@@ -25,11 +27,12 @@ namespace DDSMex
 	// ToImageMatrix                   | PARTIAL
 	// ToMatrix                        | PARTIAL
 	
-	class DDSImage : public DirectX::ScratchImage
+	class DDS : public DirectX::ScratchImage
 	{
 	public:
-		DDSImage() : m_flags(DirectX::CP_FLAGS_NONE) {};
-		DDSImage(const mxArray* mx_metadata, const mxArray* mx_images);  // MATLAB 'Dds' object -> MEX object
+		DDS() : _flags(DirectX::CP_FLAGS_NONE) {};
+		explicit DDS(DWORD flags) : _flags(flags) {};
+		DDS(const mxArray* mx_metadata, const mxArray* mx_images);  // MATLAB 'Dds' object -> MEX object
 		// Inherits:
 		// size_t      m_nimages;
 		// size_t      m_size;
@@ -37,57 +40,87 @@ namespace DDSMex
 		// Image*      m_image;
 		// uint8_t*    m_memory;
 		
+		void SetFlags(DWORD flags) {_flags = flags;}
+		DWORD GetFlags() {return _flags;}
+		
+		mwIndex ComputeIndexMEX(size_t mip, size_t item, size_t slice);
+		
 		mxArray* ExportMetadata();
 		mxArray* ExportImages();
+		static mxArray* ExportMetadata(const DirectX::TexMetadata& metadata);
+		static mxArray* ExportMetadata(const DirectX::TexMetadata& metadata, DWORD flags);
+		
+		void ToImage   (mxArray*& mx_dds_rgb);
+		void ToImage   (mxArray*& mx_dds_rgb, mxArray*& mx_dds_a);
+		void ToMatrix  (mxArray*& mat_out, bool combine_alpha);
+		void ToMatrix  (mxArray*& mx_dds_rgb, mxArray*& mx_dds_a);
 		
 	private:
-		DWORD m_flags;
-		mxArray* ExportFormat(DXGI_FORMAT fmt);
-		void ImportMetadata(const mxArray* mx_metadata, DirectX::TexMetadata &metadata);
-		void ImportImages(const mxArray* mx_images, DirectX::Image* images, size_t array_size, size_t mip_levels, size_t depth, DirectX::TEX_DIMENSION dimension);
+		DWORD _flags;
 		
+		static mxArray* ExportFormat(DXGI_FORMAT fmt);
+		
+		void PrepareImages(DDS &out);
+		void ImportMetadata(const mxArray* mx_metadata, DirectX::TexMetadata& metadata);
+		void ImportImages(const mxArray* mx_images, DirectX::Image* images, size_t array_size, size_t mip_levels, size_t depth, DirectX::TEX_DIMENSION dimension);
+		void FormMatrix(mxArray*& mx_dds_rgb, bool combine_alpha = false);
+		void FormMatrix(mxArray*& mx_dds_rgb, mxArray*& mx_dds_a);
+		void FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, bool combine_alpha);
+		void FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, mxArray*& mx_ddsslice_a);
 	};
 	
-	class DDS
+	class DDSArray
 	{
 	public:
-		DDS() : dds_images(nullptr), m_sz(0), n_sz(0) {};
-		~DDS() {if(dds_images) mxFree(dds_images);}
+		DDSArray() : _arr(nullptr), _sz_m(0), _sz_n(0), _size(0) {};
+		DDSArray(size_t m, size_t n, DWORD flags = DirectX::CP_FLAGS_NONE);
+		~DDSArray() {delete[] _arr;}
+		
+		/* assign */
+		DDSArray& operator=(const DDSArray& in) = default;
 		
 		/* static constructors */
-		static DDS ReadFile    (int nrhs, const mxArray* prhs[]);
-		static DDS ReadMetadata(int nrhs, const mxArray* prhs[]);
-		static DDS Import      (int nrhs, const mxArray* prhs[]);
+		static DDSArray ReadFile    (int nrhs, const mxArray* prhs[]);
+		static DDSArray Import      (const mxArray* in_struct);
 		
-		void FlipRotate                  (MEXFUNCTION_SIGNATURE);
-		void Resize                      (MEXFUNCTION_SIGNATURE);
-		void Convert                     (MEXFUNCTION_SIGNATURE);
-		void ConvertToSinglePlane        (MEXFUNCTION_SIGNATURE);
-		void GenerateMipMaps             (MEXFUNCTION_SIGNATURE);
-		void GenerateMipMaps3D           (MEXFUNCTION_SIGNATURE);
-		void ScaleMipMapsAlphaForCoverage(MEXFUNCTION_SIGNATURE);
-		void PremultiplyAlpha            (MEXFUNCTION_SIGNATURE);
-		void Compress                    (MEXFUNCTION_SIGNATURE);
-		void Decompress                  (MEXFUNCTION_SIGNATURE);
-		void ComputeNormalMap            (MEXFUNCTION_SIGNATURE);
-		void ComputeMSE                  (MEXFUNCTION_SIGNATURE);
-		void AsImage                     (MEXFUNCTION_SIGNATURE);
-		void AsMatrix                    (MEXFUNCTION_SIGNATURE);
+		void FlipRotate                  (MEXF_IN);
+		void Resize                      (MEXF_IN);
+		void Convert                     (MEXF_IN);
+		void ConvertToSinglePlane        (MEXF_IN);
+		void GenerateMipMaps             (MEXF_IN);
+		void GenerateMipMaps3D           (MEXF_IN);
+		void ScaleMipMapsAlphaForCoverage(MEXF_IN);
+		void PremultiplyAlpha            (MEXF_IN);
+		void Compress                    (MEXF_IN);
+		void Decompress                  (MEXF_IN);
+		void ComputeNormalMap            (MEXF_IN);
+		void ComputeMSE                  (MEXF_IN);
+		
+		void ToImage                     (MEXF_SIG);
+		void ToMatrix                    (MEXF_SIG);
+		void ToExport                    (MEXF_OUT);
+		
+		static void ReadFile             (MEXF_SIG)
+		{
+			DDSArray::ReadFile(nrhs, prhs).ToExport(nlhs, plhs);
+		}
+		static void ReadMetadata         (MEXF_SIG);
+		
+		static void ParseFlags(const mxArray* flags_array, BiMap& map, DWORD& flags);
+		static DXGI_FORMAT ParseFormat(const mxArray* mx_fmt);
+		
+		DDS& GetDDS(size_t idx) {return _arr[idx];}
 	
 	private:
-		DDSImage*     dds_images;
-		mwSize        m_sz;
-		mwSize        n_sz;
+		DDS*          _arr;
+		size_t        _sz_m;
+		size_t        _sz_n;
+		size_t        _size;
 		
-		mwSize        num_images() {return m_sz * n_sz;};
-		
-		void ToExport(int nlhs, mxArray* plhs[]);
 		
 		/* import helpers */
-		wchar_t* ImportFilename(const mxArray* mx_filename);
-		void ImportFlags(const mxArray* flags_array, BiMap& map, DWORD& flags);
-		
-		/* export helpers */
-		mxArray* ExportFormat(DXGI_FORMAT fmt);
+		static wchar_t* ParseFilename(const mxArray* mx_filename);
+		static DDS*     AllocateDDSArray(size_t num, DDS* in);
+		static DDS*     AllocateDDSArray(size_t num, DWORD flags);
 	};
 }

@@ -59,22 +59,22 @@ classdef Dds
 		end
 		
 		function newdds = convert(obj, varargin)
-			newdds = Dds(ddsmex('CONVERT_DDS', struct(obj), varargin{:}));
+			newdds = Dds(ddsmex('CONVERT', struct(obj), varargin{:}));
 		end
 		
 		function newdds = flip(obj, flags)
-			newdds = Dds(ddsmex('FLIP_ROTATE_DDS',struct(obj), flags));
+			newdds = Dds(ddsmex('FLIPROTATE',struct(obj), flags));
 		end
 		
 		function newdds = rotate(obj, flags)
-			newdds = Dds(ddsmex('FLIP_ROTATE_DDS',struct(obj), flags));
+			newdds = Dds(ddsmex('FLIPROTATE',struct(obj), flags));
 		end
 		
 		function newdds = decompress(obj,fmt)
 			if(nargin == 2)
-				newdds = Dds(ddsmex('DECOMPRESS_DDS', struct(obj), fmt));
+				newdds = Dds(ddsmex('DECOMPRESS', struct(obj), fmt));
 			else
-				newdds = Dds(ddsmex('DECOMPRESS_DDS', struct(obj)));
+				newdds = Dds(ddsmex('DECOMPRESS', struct(obj)));
 			end
 		end
 		
@@ -217,7 +217,7 @@ classdef Dds
 		end
 		
 		function metadata = finfo(varargin)
-			metadata = ddsmex('READ_METADATA', varargin{:});
+			metadata = ddsmex('READMETADATA', varargin{:});
 		end
 	end
 	
