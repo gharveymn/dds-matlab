@@ -104,7 +104,10 @@ namespace DXTMEX
 		DXTImageArray& operator=(DXTImageArray&& in) = default;
 		
 		/* initializers */
-		void ReadFile                    (MEXF_IN);
+		void ReadDDSFile                 (MEXF_IN);
+		void ReadHDRFile                 (MEXF_IN);
+		void ReadTGAFile                 (MEXF_IN);
+		void ReadEXRFile                 (MEXF_IN);
 		void Import                      (MEXF_IN);
 		
 		/* utilities */
@@ -129,10 +132,31 @@ namespace DXTMEX
 		
 		void ToExport                    (MEXF_OUT);
 		
-		static void ReadFile             (MEXF_SIG)
+		static void ReadDDSFile          (MEXF_SIG)
 		{
 			DXTImageArray dxtimage_array;
-			dxtimage_array.ReadFile(nrhs, prhs);
+			dxtimage_array.ReadDDSFile(nrhs, prhs);
+			dxtimage_array.ToExport(nlhs, plhs);
+		}
+		
+		static void ReadHDRFile          (MEXF_SIG)
+		{
+			DXTImageArray dxtimage_array;
+			dxtimage_array.ReadHDRFile(nrhs, prhs);
+			dxtimage_array.ToExport(nlhs, plhs);
+		}
+		
+		static void ReadTGAFile          (MEXF_SIG)
+		{
+			DXTImageArray dxtimage_array;
+			dxtimage_array.ReadTGAFile(nrhs, prhs);
+			dxtimage_array.ToExport(nlhs, plhs);
+		}
+		
+		static void ReadEXRFile          (MEXF_SIG)
+		{
+			DXTImageArray dxtimage_array;
+			dxtimage_array.ReadEXRFile(nrhs, prhs);
 			dxtimage_array.ToExport(nlhs, plhs);
 		}
 		

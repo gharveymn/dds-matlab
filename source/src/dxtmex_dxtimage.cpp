@@ -609,7 +609,7 @@ DXTImage* DXTImageArray::AllocateDXTImageArray(size_t num, DWORD flags)
 	return out;
 }
 
-void DXTImageArray::ReadFile(int nrhs, const mxArray* prhs[])
+void DXTImageArray::ReadDDSFile(int nrhs, const mxArray** prhs)
 {
 	size_t i;
 	DWORD flags = DirectX::CP_FLAGS_NONE;

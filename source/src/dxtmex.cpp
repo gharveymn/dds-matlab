@@ -36,7 +36,7 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	{
 		case DXTImageArray::READ_DDS_FILE:
 		{
-			DXTImageArray::ReadFile(nlhs, plhs, num_in, in);
+			DXTImageArray::ReadDDSFile(nlhs, plhs, num_in, in);
 			return;
 		}
 		case DXTImageArray::READ_DDS_META:
