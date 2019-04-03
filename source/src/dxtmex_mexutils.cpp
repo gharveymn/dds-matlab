@@ -2,9 +2,9 @@
 #include <cstring>
 
 #include "mex.h"
-#include "ddsmex_mexutils.hpp"
+#include "dxtmex_mexutils.hpp"
 
-void DDSMEX::MEXUtils::ToUpper(mxArray* mx_str)
+void DXTMEX::MEXUtils::ToUpper(mxArray* mx_str)
 {
 	size_t i;
 	size_t n = mxGetNumberOfElements(mx_str);
@@ -15,7 +15,7 @@ void DDSMEX::MEXUtils::ToUpper(mxArray* mx_str)
 	}
 }
 
-void DDSMEX::MEXUtils::ToLower(mxArray* mx_str)
+void DXTMEX::MEXUtils::ToLower(mxArray* mx_str)
 {
 	size_t i;
 	size_t n = mxGetNumberOfElements(mx_str);
@@ -27,7 +27,7 @@ void DDSMEX::MEXUtils::ToLower(mxArray* mx_str)
 	}
 }
 
-bool DDSMEX::MEXUtils::CompareMEXString(const mxArray* mx_arr, const char* cmpstr)
+bool DXTMEX::MEXUtils::CompareMEXString(const mxArray* mx_arr, const char* cmpstr)
 {
 	mwIndex i;
 	mxChar* mx_str = mxGetChars(mx_arr);

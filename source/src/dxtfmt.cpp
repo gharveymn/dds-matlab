@@ -1,6 +1,6 @@
 #include "directxtex.h"
 
-namespace ddsio
+namespace DXTMEX
 {
 	size_t PagingSize(DXGI_FORMAT fmt)
 	{

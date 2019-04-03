@@ -1,38 +1,38 @@
 #include "mex.h"
-#include "ddsmex_maps.hpp"
-#include "ddsmex_dds.hpp"
-#include "ddsmex_mexerror.hpp"
-#include "ddsmex_mexutils.hpp"
+#include "dxtmex_maps.hpp"
+#include "dxtmex_dxtimage.hpp"
+#include "dxtmex_mexerror.hpp"
+#include "dxtmex_mexutils.hpp"
 
-using namespace DDSMEX;
+using namespace DXTMEX;
 
-static std::map<std::string, DDSArray::operation> g_directive_map
+static std::map<std::string, DXTImageArray::operation> g_directive_map
 {
-	{"READ_FILE",                        DDSArray::READ_FILE                       },
-	{"READ_META",                        DDSArray::READ_META                       },
-	{"FLIP_ROTATE",                      DDSArray::FLIP_ROTATE                     },
-	{"RESIZE",                           DDSArray::RESIZE                          },
-	{"CONVERT",                          DDSArray::CONVERT                         },
-	{"CONVERT_TO_SINGLE_PLANE",          DDSArray::CONVERT_TO_SINGLE_PLANE         },
-	{"GENERATE_MIPMAPS",                 DDSArray::GENERATE_MIPMAPS                },
-	{"GENERATE_MIPMAPS_3D",              DDSArray::GENERATE_MIPMAPS_3D             },
-	{"SCALE_MIPMAPS_ALPHA_FOR_COVERAGE", DDSArray::SCALE_MIPMAPS_ALPHA_FOR_COVERAGE},
-	{"PREMULTIPLY_ALPHA",                DDSArray::PREMULTIPLY_ALPHA               },
-	{"COMPRESS",                         DDSArray::COMPRESS                        },
-	{"DECOMPRESS",                       DDSArray::DECOMPRESS                      },
-	{"COPY_RECTANGLE",                   DDSArray::COPY_RECTANGLE                  },
-	{"COMPUTE_NORMAL_MAP",               DDSArray::COMPUTE_NORMAL_MAP              },
-	{"COMPUTE_MSE",                      DDSArray::COMPUTE_MSE                     },
-	{"SAVE_FILE",                        DDSArray::SAVE_FILE                       },
-	{"TO_IMAGE",                         DDSArray::TO_IMAGE                        },
-	{"TO_MATRIX",                        DDSArray::TO_MATRIX                       }
+	{"READ_DDS_FILE",                    DXTImageArray::READ_DDS_FILE                   },
+	{"READ_DDS_META",                    DXTImageArray::READ_DDS_META                   },
+	{"FLIP_ROTATE",                      DXTImageArray::FLIP_ROTATE                     },
+	{"RESIZE",                           DXTImageArray::RESIZE                          },
+	{"CONVERT",                          DXTImageArray::CONVERT                         },
+	{"CONVERT_TO_SINGLE_PLANE",          DXTImageArray::CONVERT_TO_SINGLE_PLANE         },
+	{"GENERATE_MIPMAPS",                 DXTImageArray::GENERATE_MIPMAPS                },
+	{"GENERATE_MIPMAPS_3D",              DXTImageArray::GENERATE_MIPMAPS_3D             },
+	{"SCALE_MIPMAPS_ALPHA_FOR_COVERAGE", DXTImageArray::SCALE_MIPMAPS_ALPHA_FOR_COVERAGE},
+	{"PREMULTIPLY_ALPHA",                DXTImageArray::PREMULTIPLY_ALPHA               },
+	{"COMPRESS",                         DXTImageArray::COMPRESS                        },
+	{"DECOMPRESS",                       DXTImageArray::DECOMPRESS                      },
+	{"COPY_RECTANGLE",                   DXTImageArray::COPY_RECTANGLE                  },
+	{"COMPUTE_NORMAL_MAP",               DXTImageArray::COMPUTE_NORMAL_MAP              },
+	{"COMPUTE_MSE",                      DXTImageArray::COMPUTE_MSE                     },
+	{"SAVE_FILE",                        DXTImageArray::SAVE_FILE                       },
+	{"TO_IMAGE",                         DXTImageArray::TO_IMAGE                        },
+	{"TO_MATRIX",                        DXTImageArray::TO_MATRIX                       }
 };
 
-DDS::DDS(const mxArray* mx_width, const mxArray* mx_height, const mxArray* mx_row_pitch, const mxArray* mx_slice_pitch, const mxArray* mx_pixels, const mxArray* mx_formatid, const mxArray* mx_flags)
+DXTImage::DXTImage(const mxArray* mx_width, const mxArray* mx_height, const mxArray* mx_row_pitch, const mxArray* mx_slice_pitch, const mxArray* mx_pixels, const mxArray* mx_formatid, const mxArray* mx_flags)
 {
 	if((mx_width == nullptr) || (mx_height == nullptr) || (mx_row_pitch == nullptr) || (mx_slice_pitch == nullptr) || (mx_pixels == nullptr) || (mx_formatid == nullptr) || (mx_flags == nullptr))
 	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidImportError", "An imported DdsSlice field was unexpectedly empty.");
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidImportError", "An imported DXTImageSlice field was unexpectedly empty.");
 	}
 	this->_flags = (DWORD)*(uint32_T*)mxGetData(mx_flags);
 	
@@ -45,16 +45,16 @@ DDS::DDS(const mxArray* mx_width, const mxArray* mx_height, const mxArray* mx_ro
 	DirectX::Image image = *this->GetImages();
 	if(image.rowPitch != (size_t)*(uint64_T*)mxGetData(mx_row_pitch))
 	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidImportError", "The imported row pitch of the DdsSlice differs from the expected row pitch.");
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidImportError", "The imported row pitch of the DXTImageSlice differs from the expected row pitch.");
 	}
 	else if(image.slicePitch != (size_t)*(uint64_T*)mxGetData(mx_slice_pitch))
 	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidImportError", "The imported slice pitch of the DdsSlice differs from the expected slice pitch.");
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidImportError", "The imported slice pitch of the DXTImageSlice differs from the expected slice pitch.");
 	}
 	memcpy(image.pixels, mxGetData(mx_pixels), image.slicePitch * sizeof(uint8_T));
 }
 
-DDS::DDS(const mxArray* mx_metadata, const mxArray* mx_images)
+DXTImage::DXTImage(const mxArray* mx_metadata, const mxArray* mx_images)
 {
 	if(mx_metadata == nullptr)
 	{
@@ -71,7 +71,7 @@ DDS::DDS(const mxArray* mx_metadata, const mxArray* mx_images)
 	ImportImages(mx_images, (DirectX::Image*)this->GetImages(), metadata.arraySize, metadata.mipLevels, metadata.depth, metadata.dimension);
 }
 
-void DDS::ImportMetadata(const mxArray* mx_metadata, DirectX::TexMetadata& metadata)
+void DXTImage::ImportMetadata(const mxArray* mx_metadata, DirectX::TexMetadata& metadata)
 {
 	metadata.width      = (size_t)*(uint64_T*)mxGetData(mxGetField(mx_metadata, 0, "Width"));
 	metadata.height     = (size_t)*(uint64_T*)mxGetData(mxGetField(mx_metadata, 0, "Height"));
@@ -84,7 +84,7 @@ void DDS::ImportMetadata(const mxArray* mx_metadata, DirectX::TexMetadata& metad
 	metadata.dimension  = (DirectX::TEX_DIMENSION)(*(uint8_T*)mxGetData(mxGetField(mx_metadata, 0, "Dimension")) + 1);
 }
 
-void DDS::ImportImages(const mxArray* mx_images, DirectX::Image* images, size_t array_size, size_t mip_levels, size_t depth, DirectX::TEX_DIMENSION dimension)
+void DXTImage::ImportImages(const mxArray* mx_images, DirectX::Image* images, size_t array_size, size_t mip_levels, size_t depth, DirectX::TEX_DIMENSION dimension)
 {
 	mwIndex i, j, src_idx, dst_idx;
 	switch (dimension)
@@ -128,12 +128,12 @@ void DDS::ImportImages(const mxArray* mx_images, DirectX::Image* images, size_t 
 	}
 }
 
-mxArray* DDS::ExportMetadata()
+mxArray* DXTImage::ExportMetadata()
 {
 	return ExportMetadata(this->GetMetadata(), this->_flags);
 }
 
-mxArray* DDS::ExportMetadata(const DirectX::TexMetadata& metadata)
+mxArray* DXTImage::ExportMetadata(const DirectX::TexMetadata& metadata)
 {
 	const char* fieldnames[] = {"Width", "Height", "Depth", "ArraySize", "MipLevels", "MiscFlags", "MiscFlags2", "Format", "Dimension", "IsCubeMap", "IsPMAlpha", "IsVolumeMap"};
 	mxArray* mx_metadata = mxCreateStructMatrix(1, 1, 12, fieldnames);
@@ -152,7 +152,7 @@ mxArray* DDS::ExportMetadata(const DirectX::TexMetadata& metadata)
 	return mx_metadata;
 }
 
-mxArray* DDS::ExportMetadata(const DirectX::TexMetadata& metadata, DWORD flags)
+mxArray* DXTImage::ExportMetadata(const DirectX::TexMetadata& metadata, DWORD flags)
 {
 	const char* fieldnames[] = {"Width", "Height", "Depth", "ArraySize", "MipLevels", "MiscFlags", "MiscFlags2", "Format", "Dimension", "Flags", "IsCubeMap", "IsPMAlpha", "IsVolumeMap"};
 	mxArray* mx_metadata = mxCreateStructMatrix(1, 1, 13, fieldnames);
@@ -172,7 +172,7 @@ mxArray* DDS::ExportMetadata(const DirectX::TexMetadata& metadata, DWORD flags)
 	return mx_metadata;
 }
 
-mxArray* DDS::ExportFormat(DXGI_FORMAT fmt)
+mxArray* DXTImage::ExportFormat(DXGI_FORMAT fmt)
 {
 	const char* fmt_fields[] = {
 							"Name",
@@ -208,7 +208,7 @@ mxArray* DDS::ExportFormat(DXGI_FORMAT fmt)
 	return mx_fmt;
 }
 
-mwIndex DDS::ComputeIndexMEX(size_t mip, size_t item, size_t slice)
+mwIndex DXTImage::ComputeIndexMEX(size_t mip, size_t item, size_t slice)
 {
 	auto ret = size_t(-1);
 	const DirectX::TexMetadata& metadata = this->GetMetadata();
@@ -274,7 +274,7 @@ mwIndex DDS::ComputeIndexMEX(size_t mip, size_t item, size_t slice)
 	return ret;
 }
 
-mxArray* DDS::ExportImages()
+mxArray* DXTImage::ExportImages()
 {
 	mxArray* tmp,* mx_images;
 	mwIndex i, j, k, dst_idx;
@@ -310,7 +310,7 @@ mxArray* DDS::ExportImages()
 	return mx_images;
 }
 
-void DDS::PrepareImages(DDS &out)
+void DXTImage::PrepareImages(DXTImage &out)
 {
 	DXGI_FORMAT srgb_fmt= DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	const DirectX::TexMetadata metadata = this->GetMetadata();
@@ -347,44 +347,44 @@ void DDS::PrepareImages(DDS &out)
 	}
 }
 
-void DDS::ToImage(mxArray*& mx_dds_rgb)
+void DXTImage::ToImage(mxArray*& mx_dxtimage_rgb)
 {
-	DDS prepared_images;
+	DXTImage prepared_images;
 	this->PrepareImages(prepared_images);
-	prepared_images.FormMatrix(mx_dds_rgb);
+	prepared_images.FormMatrix(mx_dxtimage_rgb);
 }
 
-void DDS::ToImage(mxArray*& mx_dds_rgb, mxArray*& mx_dds_a)
+void DXTImage::ToImage(mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a)
 {
-	DDS prepared_images;
+	DXTImage prepared_images;
 	this->PrepareImages(prepared_images);
-	prepared_images.FormMatrix(mx_dds_rgb, mx_dds_a);
+	prepared_images.FormMatrix(mx_dxtimage_rgb, mx_dxtimage_a);
 }
 
-void DDS::ToMatrix(mxArray*& mx_dds_rgb, bool combine_alpha)
+void DXTImage::ToMatrix(mxArray*& mx_dxtimage_rgb, bool combine_alpha)
 {
-	this->FormMatrix(mx_dds_rgb, combine_alpha);
+	this->FormMatrix(mx_dxtimage_rgb, combine_alpha);
 }
 
-void DDS::ToMatrix(mxArray*& mx_dds_rgb, mxArray*& mx_dds_a)
+void DXTImage::ToMatrix(mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a)
 {
-	this->FormMatrix(mx_dds_rgb, mx_dds_a);
+	this->FormMatrix(mx_dxtimage_rgb, mx_dxtimage_a);
 }
 
-void DDS::FormMatrix(mxArray*& mx_dds_rgb, bool combine_alpha)
+void DXTImage::FormMatrix(mxArray*& mx_dxtimage_rgb, bool combine_alpha)
 {
 	mxArray* tmp_rgb;
 	size_t i, j, k;
 	
 	if(this->GetImageCount() == 1)
 	{
-		FormMatrix(this->GetImage(0, 0, 0), mx_dds_rgb, combine_alpha);
+		FormMatrix(this->GetImage(0, 0, 0), mx_dxtimage_rgb, combine_alpha);
 	}
 	else
 	{
 		DirectX::TexMetadata metadata = this->GetMetadata();
 		size_t depth = metadata.depth;
-		mx_dds_rgb = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
+		mx_dxtimage_rgb = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
 		for(i = 0; i < metadata.mipLevels; i++)
 		{
 			for(j = 0; j < metadata.arraySize; j++)
@@ -392,7 +392,7 @@ void DDS::FormMatrix(mxArray*& mx_dds_rgb, bool combine_alpha)
 				for(k = 0; k < depth; k++)
 				{
 					FormMatrix(this->GetImage(i, j, k), tmp_rgb, combine_alpha);
-					mxSetCell(mx_dds_rgb, this->ComputeIndexMEX(i, j, k), tmp_rgb);
+					mxSetCell(mx_dxtimage_rgb, this->ComputeIndexMEX(i, j, k), tmp_rgb);
 				}
 			}
 			if(depth > 1)
@@ -403,21 +403,21 @@ void DDS::FormMatrix(mxArray*& mx_dds_rgb, bool combine_alpha)
 	}
 }
 
-void DDS::FormMatrix(mxArray*& mx_dds_rgb, mxArray*& mx_dds_a)
+void DXTImage::FormMatrix(mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a)
 {
 	mxArray* tmp_rgb,* tmp_a;
 	size_t i, j, k;
 	
 	if(this->GetImageCount() == 1)
 	{
-		FormMatrix(this->GetImage(0, 0, 0), mx_dds_rgb, mx_dds_a);
+		FormMatrix(this->GetImage(0, 0, 0), mx_dxtimage_rgb, mx_dxtimage_a);
 	}
 	else
 	{
 		DirectX::TexMetadata metadata = this->GetMetadata();
 		size_t depth = metadata.depth;
-		mx_dds_rgb = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
-		mx_dds_a = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
+		mx_dxtimage_rgb = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
+		mx_dxtimage_a = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
 		for(i = 0; i < metadata.mipLevels; i++)
 		{
 			for(j = 0; j < metadata.arraySize; j++)
@@ -425,8 +425,8 @@ void DDS::FormMatrix(mxArray*& mx_dds_rgb, mxArray*& mx_dds_a)
 				for(k = 0; k < depth; k++)
 				{
 					FormMatrix(this->GetImage(i, j, k), tmp_rgb, tmp_a);
-					mxSetCell(mx_dds_rgb, this->ComputeIndexMEX(i, j, k), tmp_rgb);
-					mxSetCell(mx_dds_a, this->ComputeIndexMEX(i, j, k), tmp_a);
+					mxSetCell(mx_dxtimage_rgb, this->ComputeIndexMEX(i, j, k), tmp_rgb);
+					mxSetCell(mx_dxtimage_a, this->ComputeIndexMEX(i, j, k), tmp_a);
 				}
 			}
 			if(depth > 1)
@@ -437,7 +437,7 @@ void DDS::FormMatrix(mxArray*& mx_dds_rgb, mxArray*& mx_dds_a)
 	}
 }
 
-void DDS::FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, bool combine_alpha)
+void DXTImage::FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_dxtimageslice_rgb, bool combine_alpha)
 {
 	size_t i, j, src_idx, dst_idx;
 	if(!DirectX::IsValid(raw_img->format))
@@ -452,11 +452,11 @@ void DDS::FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, b
 	{
 		// assume 8-bit unsigned normalized sRGB for now
 		mwSize rgb_sz[3] = {raw_img->height, raw_img->width, 4};
-		mx_ddsslice_rgb = mxCreateNumericArray(3, rgb_sz, mxUINT8_CLASS, mxREAL);
-		auto r_data = (uint8_t*)mxGetData(mx_ddsslice_rgb);
-		auto g_data = (uint8_t*)mxGetData(mx_ddsslice_rgb) + raw_img->height*raw_img->width;
-		auto b_data = (uint8_t*)mxGetData(mx_ddsslice_rgb) + 2*raw_img->height*raw_img->width;
-		auto a_data = (uint8_t*)mxGetData(mx_ddsslice_rgb) + 3*raw_img->height*raw_img->width;
+		mx_dxtimageslice_rgb = mxCreateNumericArray(3, rgb_sz, mxUINT8_CLASS, mxREAL);
+		auto r_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb);
+		auto g_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + raw_img->height*raw_img->width;
+		auto b_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + 2*raw_img->height*raw_img->width;
+		auto a_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + 3*raw_img->height*raw_img->width;
 		for(i = 0; i < raw_img->height; i++)
 		{
 			for(j = 0; j < raw_img->width; j++)
@@ -474,10 +474,10 @@ void DDS::FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, b
 	{
 		// assume 8-bit unsigned normalized sRGB for now
 		mwSize rgb_sz[3] = {raw_img->height, raw_img->width, 3};
-		mx_ddsslice_rgb = mxCreateNumericArray(3, rgb_sz, mxUINT8_CLASS, mxREAL);
-		auto r_data = (uint8_t*)mxGetData(mx_ddsslice_rgb);
-		auto g_data = (uint8_t*)mxGetData(mx_ddsslice_rgb) + raw_img->height*raw_img->width;
-		auto b_data = (uint8_t*)mxGetData(mx_ddsslice_rgb) + 2*raw_img->height*raw_img->width;
+		mx_dxtimageslice_rgb = mxCreateNumericArray(3, rgb_sz, mxUINT8_CLASS, mxREAL);
+		auto r_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb);
+		auto g_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + raw_img->height*raw_img->width;
+		auto b_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + 2*raw_img->height*raw_img->width;
 		for(i = 0; i < raw_img->height; i++)
 		{
 			for(j = 0; j < raw_img->width; j++)
@@ -492,7 +492,7 @@ void DDS::FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, b
 	}
 }
 
-void DDS::FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, mxArray*& mx_ddsslice_a)
+void DXTImage::FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_dxtimageslice_rgb, mxArray*& mx_dxtimageslice_a)
 {
 	size_t i, j, src_idx, dst_idx;
 	if(!DirectX::IsValid(raw_img->format))
@@ -505,14 +505,14 @@ void DDS::FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, m
 	}
 	// assume 8-bit unsigned normalized sRGB for now
 	mwSize rgb_sz[3] = {raw_img->height, raw_img->width, 3};
-	mx_ddsslice_rgb = mxCreateNumericArray(3, rgb_sz, mxUINT8_CLASS, mxREAL);
+	mx_dxtimageslice_rgb = mxCreateNumericArray(3, rgb_sz, mxUINT8_CLASS, mxREAL);
 	if(DirectX::HasAlpha(raw_img->format))
 	{
-		mx_ddsslice_a = mxCreateNumericMatrix(raw_img->height, raw_img->width, mxUINT8_CLASS, mxREAL);
-		auto r_data = (uint8_t*)mxGetData(mx_ddsslice_rgb);
-		auto g_data = (uint8_t*)mxGetData(mx_ddsslice_rgb) + raw_img->height * raw_img->width;
-		auto b_data = (uint8_t*)mxGetData(mx_ddsslice_rgb) + 2 * raw_img->height * raw_img->width;
-		auto a_data = (uint8_t*)mxGetData(mx_ddsslice_a);
+		mx_dxtimageslice_a = mxCreateNumericMatrix(raw_img->height, raw_img->width, mxUINT8_CLASS, mxREAL);
+		auto r_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb);
+		auto g_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + raw_img->height * raw_img->width;
+		auto b_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + 2 * raw_img->height * raw_img->width;
+		auto a_data = (uint8_t*)mxGetData(mx_dxtimageslice_a);
 		for(i = 0; i < raw_img->height; i++)
 		{
 			for(j = 0; j < raw_img->width; j++)
@@ -528,10 +528,10 @@ void DDS::FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, m
 	}
 	else
 	{
-		mx_ddsslice_a = mxCreateNumericMatrix(0, 0, mxUINT8_CLASS, mxREAL);
-		auto r_data = (uint8_t*)mxGetData(mx_ddsslice_rgb);
-		auto g_data = (uint8_t*)mxGetData(mx_ddsslice_rgb) + raw_img->height * raw_img->width;
-		auto b_data = (uint8_t*)mxGetData(mx_ddsslice_rgb) + 2 * raw_img->height * raw_img->width;
+		mx_dxtimageslice_a = mxCreateNumericMatrix(0, 0, mxUINT8_CLASS, mxREAL);
+		auto r_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb);
+		auto g_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + raw_img->height * raw_img->width;
+		auto b_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + 2 * raw_img->height * raw_img->width;
 		for(i = 0; i < raw_img->height; i++)
 		{
 			for(j = 0; j < raw_img->width; j++)
@@ -546,10 +546,10 @@ void DDS::FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_ddsslice_rgb, m
 	}
 }
 
-DDSArray::DDSArray(size_t m, size_t n, DWORD flags) : _sz_m(m), _sz_n(n), _size(m*n)
+DXTImageArray::DXTImageArray(size_t m, size_t n, DWORD flags) : _sz_m(m), _sz_n(n), _size(m*n)
 {
 	size_t i;
-	this->_arr = new(std::nothrow) DDS[this->_size];
+	this->_arr = new(std::nothrow) DXTImage[this->_size];
 	if(this->_arr)
 	{
 		for(i = 0; i < this->_size; i++)
@@ -559,14 +559,14 @@ DDSArray::DDSArray(size_t m, size_t n, DWORD flags) : _sz_m(m), _sz_n(n), _size(
 	}
 	else
 	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL|MEU_SEVERITY_SYSTEM, "MemoryAllocationError", "Could not allocate memory for DDS objects.");
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL|MEU_SEVERITY_SYSTEM, "MemoryAllocationError", "Could not allocate memory for the DXTImage array.");
 	}
 }
 
-DDS* DDSArray::AllocateDDSArray(size_t num, DDS* in)
+DXTImage* DXTImageArray::AllocateDXTImageArray(size_t num, DXTImage* in)
 {
 	size_t i;
-	DDS* out = new(std::nothrow) DDS[num];
+	auto out = new(std::nothrow) DXTImage[num];
 	if(out)
 	{
 		for(i = 0; i < num; i++)
@@ -576,25 +576,25 @@ DDS* DDSArray::AllocateDDSArray(size_t num, DDS* in)
 	}
 	else
 	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL|MEU_SEVERITY_SYSTEM, "MemoryAllocationError", "Could not allocate memory for DDS objects.");
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL|MEU_SEVERITY_SYSTEM, "MemoryAllocationError", "Could not allocate memory for the DXTImage array.");
 	}
 	return out;
 }
 
-DDS* DDSArray::AllocateDDSArray(size_t num)
+DXTImage* DXTImageArray::AllocateDXTImageArray(size_t num)
 {
-	DDS* out = new(std::nothrow) DDS[num];
+	auto out = new(std::nothrow) DXTImage[num];
 	if(!out)
 	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL|MEU_SEVERITY_SYSTEM, "MemoryAllocationError", "Could not allocate memory for DDS objects.");
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL|MEU_SEVERITY_SYSTEM, "MemoryAllocationError", "Could not allocate memory for the DXTImage array.");
 	}
 	return out;
 }
 
-DDS* DDSArray::AllocateDDSArray(size_t num, DWORD flags)
+DXTImage* DXTImageArray::AllocateDXTImageArray(size_t num, DWORD flags)
 {
 	size_t i;
-	DDS* out = new(std::nothrow) DDS[num];
+	auto out = new(std::nothrow) DXTImage[num];
 	if(out)
 	{
 		for(i = 0; i < num; i++)
@@ -604,12 +604,12 @@ DDS* DDSArray::AllocateDDSArray(size_t num, DWORD flags)
 	}
 	else
 	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL|MEU_SEVERITY_SYSTEM, "MemoryAllocationError", "Could not allocate memory for DDS objects.");
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL|MEU_SEVERITY_SYSTEM, "MemoryAllocationError", "Could not allocate memory for the DXTImage array.");
 	}
 	return out;
 }
 
-void DDSArray::ReadFile(int nrhs, const mxArray* prhs[])
+void DXTImageArray::ReadFile(int nrhs, const mxArray* prhs[])
 {
 	size_t i;
 	DWORD flags = DirectX::CP_FLAGS_NONE;
@@ -635,7 +635,7 @@ void DDSArray::ReadFile(int nrhs, const mxArray* prhs[])
 		this->_sz_m = mxGetM(mx_filenames);
 		this->_sz_n = mxGetN(mx_filenames);
 		this->_size = this->_sz_m * this->_sz_n;
-		this->_arr  = AllocateDDSArray(this->_size, flags);
+		this->_arr  = AllocateDXTImageArray(this->_size, flags);
 		for(i = 0; i < this->_size; i++)
 		{
 			filename = ParseFilename(mxGetCell(mx_filenames, i));
@@ -652,7 +652,7 @@ void DDSArray::ReadFile(int nrhs, const mxArray* prhs[])
 		this->_sz_m = 1;
 		this->_sz_n = 1;
 		this->_size = 1;
-		this->_arr  = AllocateDDSArray(this->_size, flags);
+		this->_arr  = AllocateDXTImageArray(this->_size, flags);
 		filename = ParseFilename(mx_filenames);
 		hres = DirectX::LoadFromDDSFile(filename, flags, nullptr, this->_arr[0]);
 		if(FAILED(hres))
@@ -663,7 +663,7 @@ void DDSArray::ReadFile(int nrhs, const mxArray* prhs[])
 	}
 }
 
-void DDSArray::Import(int nrhs, const mxArray* prhs[])
+void DXTImageArray::Import(int nrhs, const mxArray* prhs[])
 {
 	size_t i;
 	if(nrhs < 1)
@@ -686,19 +686,19 @@ void DDSArray::Import(int nrhs, const mxArray* prhs[])
 	this->_sz_m = mxGetM(in_struct);
 	this->_sz_n = mxGetN(in_struct);
 	this->_size = this->_sz_m * this->_sz_n;
-	this->_arr  = AllocateDDSArray(this->_size);
-	if(DDS::IsDdsImport(in_struct))
+	this->_arr  = AllocateDXTImageArray(this->_size);
+	if(DXTImage::IsDXTImageImport(in_struct))
 	{
 		for(i = 0; i < this->_size; i++)
 		{
-			this->_arr[i] = DDS(mxGetField(in_struct, i, "Metadata"), mxGetField(in_struct, i, "Images"));
+			this->_arr[i] = DXTImage(mxGetField(in_struct, i, "Metadata"), mxGetField(in_struct, i, "Images"));
 		}
 	}
-	else if(DDS::IsDdsSliceImport(in_struct))
+	else if(DXTImage::IsDXTImageSliceImport(in_struct))
 	{
 		for(i = 0; i < this->_size; i++)
 		{
-			this->_arr[i] = DDS(mxGetField(in_struct, i, "Width"),
+			this->_arr[i] = DXTImage(mxGetField(in_struct, i, "Width"),
 			                    mxGetField(in_struct, i, "Height"),
 			                    mxGetField(in_struct, i, "RowPitch"),
 			                    mxGetField(in_struct, i, "SlicePitch"),
@@ -714,7 +714,7 @@ void DDSArray::Import(int nrhs, const mxArray* prhs[])
 	
 }
 
-bool DDS::IsDdsImport(const mxArray* in)
+bool DXTImage::IsDXTImageImport(const mxArray* in)
 {
 	if(mxIsEmpty(in))
 	{
@@ -724,7 +724,7 @@ bool DDS::IsDdsImport(const mxArray* in)
 	       (mxGetField(in, 0, "Images")   != nullptr);
 }
 
-bool DDS::IsDdsSliceImport(const mxArray* in)
+bool DXTImage::IsDXTImageSliceImport(const mxArray* in)
 {
 	if(mxIsEmpty(in))
 	{
@@ -739,7 +739,7 @@ bool DDS::IsDdsSliceImport(const mxArray* in)
 	       (mxGetField(in, 0, "Flags")      != nullptr);
 }
 
-void DDSArray::ReadMetadata(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
+void DXTImageArray::ReadMetadata(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 {
 	DirectX::TexMetadata metadata = {};
 	DWORD flags = DirectX::DDS_FLAGS_NONE;
@@ -765,12 +765,12 @@ void DDSArray::ReadMetadata(int nlhs, mxArray* plhs[], int nrhs, const mxArray* 
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER | MEU_SEVERITY_HRESULT, "FileReadError", "There was an error while reading the file.");
 	}
 	
-	plhs[0] = DDS::ExportMetadata(metadata);
+	plhs[0] = DXTImage::ExportMetadata(metadata);
 	mxFree(filename);
 	
 }
 
-wchar_t* DDSArray::ParseFilename(const mxArray* mx_filename)
+wchar_t* DXTImageArray::ParseFilename(const mxArray* mx_filename)
 {
 	mwIndex i;
 	if(!mxIsChar(mx_filename))
@@ -788,7 +788,7 @@ wchar_t* DDSArray::ParseFilename(const mxArray* mx_filename)
 	return filename;
 }
 
-void DDSArray::ParseFilename(const mxArray* mx_filename, std::wstring& filename)
+void DXTImageArray::ParseFilename(const mxArray* mx_filename, std::wstring& filename)
 {
 	mwIndex i;
 	if(!mxIsChar(mx_filename))
@@ -804,7 +804,7 @@ void DDSArray::ParseFilename(const mxArray* mx_filename, std::wstring& filename)
 	}
 }
 
-void DDSArray::ParseFlags(const mxArray* mx_flags, BiMap &map, DWORD &flags)
+void DXTImageArray::ParseFlags(const mxArray* mx_flags, BiMap &map, DWORD &flags)
 {
 	mwIndex i;
 	mxArray* curr_flag;
@@ -856,7 +856,7 @@ void DDSArray::ParseFlags(const mxArray* mx_flags, BiMap &map, DWORD &flags)
 	}
 }
 
-DXGI_FORMAT DDSArray::ParseFormat(const mxArray* mx_fmt)
+DXGI_FORMAT DXTImageArray::ParseFormat(const mxArray* mx_fmt)
 {
 	DXGI_FORMAT fmt = DXGI_FORMAT_UNKNOWN;
 	if(!mxIsChar(mx_fmt))
@@ -879,10 +879,10 @@ DXGI_FORMAT DDSArray::ParseFormat(const mxArray* mx_fmt)
 	return fmt;
 }
 
-void DDSArray::FlipRotate(MEXF_IN)
+void DXTImageArray::FlipRotate(MEXF_IN)
 {
 	size_t i;
-	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	DXTImage* new_arr = AllocateDXTImageArray(this->_size, this->_arr);
 	DWORD fr_flags = DirectX::TEX_FR_ROTATE0;
 	if(nrhs < 1)
 	{
@@ -893,12 +893,12 @@ void DDSArray::FlipRotate(MEXF_IN)
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
 	}
 	
-	DDSArray::ParseFlags(prhs[0], g_frflag_map, fr_flags);
+	DXTImageArray::ParseFlags(prhs[0], g_frflag_map, fr_flags);
 	
 	for(i = 0; i < this->_size; i++)
 	{
-		DDS& pre_op  = this->GetDDS(i);
-		DDS& post_op = new_arr[i];
+		DXTImage& pre_op  = this->GetDXTImage(i);
+		DXTImage& post_op = new_arr[i];
 		hres = DirectX::FlipRotate(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), fr_flags, post_op);
 		if(FAILED(hres))
 		{
@@ -909,10 +909,10 @@ void DDSArray::FlipRotate(MEXF_IN)
 	this->_arr = new_arr;
 }
 
-void DDSArray::Resize(MEXF_IN)
+void DXTImageArray::Resize(MEXF_IN)
 {
 	size_t i;
-	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	DXTImage* new_arr = AllocateDXTImageArray(this->_size, this->_arr);
 	size_t w, h;
 	DWORD filter_flags = DirectX::TEX_FILTER_DEFAULT;
 	if(nrhs < 1)
@@ -946,7 +946,7 @@ void DDSArray::Resize(MEXF_IN)
 		w = (size_t)mxGetScalar(prhs[1]);
 		if(nrhs > 2)
 		{
-			DDSArray::ParseFlags(prhs[2], g_filterflag_map, filter_flags);
+			DXTImageArray::ParseFlags(prhs[2], g_filterflag_map, filter_flags);
 		}
 	}
 	else
@@ -965,14 +965,14 @@ void DDSArray::Resize(MEXF_IN)
 		w = (size_t)*(data + 1);
 		if(nrhs == 2)
 		{
-			DDSArray::ParseFlags(prhs[2], g_filterflag_map, filter_flags);
+			DXTImageArray::ParseFlags(prhs[2], g_filterflag_map, filter_flags);
 		}
 	}
 	
 	for(i = 0; i < this->_size; i++)
 	{
-		DDS& pre_op  = this->GetDDS(i);
-		DDS& post_op = new_arr[i];
+		DXTImage& pre_op  = this->GetDXTImage(i);
+		DXTImage& post_op = new_arr[i];
 		hres = DirectX::Resize(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), w, h, filter_flags, post_op);
 		if(FAILED(hres))
 		{
@@ -983,11 +983,11 @@ void DDSArray::Resize(MEXF_IN)
 	this->_arr = new_arr;
 }
 
-void DDSArray::Convert(MEXF_IN)
+void DXTImageArray::Convert(MEXF_IN)
 {
 	size_t i;
 	DXGI_FORMAT fmt;
-	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	DXTImage* new_arr = AllocateDXTImageArray(this->_size, this->_arr);
 	DWORD filter_flags = DirectX::TEX_FILTER_DEFAULT;
 	float threshold = DirectX::TEX_THRESHOLD_DEFAULT;
 	if(nrhs < 1)
@@ -1000,11 +1000,11 @@ void DDSArray::Convert(MEXF_IN)
 	}
 	
 	
-	fmt = DDSArray::ParseFormat(prhs[0]);
+	fmt = DXTImageArray::ParseFormat(prhs[0]);
 	
 	if(nrhs > 1)
 	{
-		DDSArray::ParseFlags(prhs[1], g_filterflag_map, filter_flags);
+		DXTImageArray::ParseFlags(prhs[1], g_filterflag_map, filter_flags);
 	}
 	
 	if(nrhs > 2)
@@ -1014,8 +1014,8 @@ void DDSArray::Convert(MEXF_IN)
 	
 	for(i = 0; i < this->_size; i++)
 	{
-		DDS& pre_op  = this->GetDDS(i);
-		DDS& post_op = new_arr[i];
+		DXTImage& pre_op  = this->GetDXTImage(i);
+		DXTImage& post_op = new_arr[i];
 		hres = DirectX::Convert(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), fmt, filter_flags, threshold, post_op);
 		if(FAILED(hres))
 		{
@@ -1026,10 +1026,10 @@ void DDSArray::Convert(MEXF_IN)
 	this->_arr = new_arr;
 }
 
-void DDSArray::ConvertToSinglePlane(MEXF_IN)
+void DXTImageArray::ConvertToSinglePlane(MEXF_IN)
 {
 	size_t i;
-	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	DXTImage* new_arr = AllocateDXTImageArray(this->_size, this->_arr);
 	if(nrhs > 0)
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
@@ -1037,8 +1037,8 @@ void DDSArray::ConvertToSinglePlane(MEXF_IN)
 	
 	for(i = 0; i < this->_size; i++)
 	{
-		DDS& pre_op  = this->GetDDS(i);
-		DDS& post_op = new_arr[i];
+		DXTImage& pre_op  = this->GetDXTImage(i);
+		DXTImage& post_op = new_arr[i];
 		hres = DirectX::ConvertToSinglePlane(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), post_op);
 		if(FAILED(hres))
 		{
@@ -1049,10 +1049,10 @@ void DDSArray::ConvertToSinglePlane(MEXF_IN)
 	this->_arr = new_arr;
 }
 
-void DDSArray::GenerateMipMaps(MEXF_IN)
+void DXTImageArray::GenerateMipMaps(MEXF_IN)
 {
 	size_t i;
-	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	DXTImage* new_arr = AllocateDXTImageArray(this->_size, this->_arr);
 	size_t levels = 0;
 	DWORD filter_flags = DirectX::TEX_FILTER_DEFAULT;
 	if(nrhs > 2)
@@ -1071,7 +1071,7 @@ void DDSArray::GenerateMipMaps(MEXF_IN)
 			levels = (size_t)mxGetScalar(prhs[0]);
 			if(nrhs > 1)
 			{
-				DDSArray::ParseFlags(prhs[1], g_filterflag_map, filter_flags);
+				DXTImageArray::ParseFlags(prhs[1], g_filterflag_map, filter_flags);
 			}
 		}
 		else if(mxIsChar(prhs[0]))
@@ -1080,7 +1080,7 @@ void DDSArray::GenerateMipMaps(MEXF_IN)
 			{
 				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Filter flags must be the last argument.");
 			}
-			DDSArray::ParseFlags(prhs[1], g_filterflag_map, filter_flags);
+			DXTImageArray::ParseFlags(prhs[1], g_filterflag_map, filter_flags);
 		}
 		else
 		{
@@ -1090,8 +1090,8 @@ void DDSArray::GenerateMipMaps(MEXF_IN)
 	
 	for(i = 0; i < this->_size; i++)
 	{
-		DDS& pre_op  = this->GetDDS(i);
-		DDS& post_op = new_arr[i];
+		DXTImage& pre_op  = this->GetDXTImage(i);
+		DXTImage& post_op = new_arr[i];
 		switch(pre_op.GetMetadata().dimension)
 		{
 			case DirectX::TEX_DIMENSION_TEXTURE1D:
@@ -1122,10 +1122,10 @@ void DDSArray::GenerateMipMaps(MEXF_IN)
 	this->_arr = new_arr;
 }
 
-void DDSArray::ScaleMipMapsAlphaForCoverage(MEXF_IN)
+void DXTImageArray::ScaleMipMapsAlphaForCoverage(MEXF_IN)
 {
 	size_t i, j;
-	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	DXTImage* new_arr = AllocateDXTImageArray(this->_size, this->_arr);
 	float alpha_ref = DirectX::TEX_THRESHOLD_DEFAULT;
 	if(nrhs > 1)
 	{
@@ -1149,8 +1149,8 @@ void DDSArray::ScaleMipMapsAlphaForCoverage(MEXF_IN)
 	
 	for(i = 0; i < this->_size; i++)
 	{
-		DDS& pre_op  = this->GetDDS(i);
-		DDS& post_op = new_arr[i];
+		DXTImage& pre_op  = this->GetDXTImage(i);
+		DXTImage& post_op = new_arr[i];
 		const DirectX::TexMetadata& metadata = pre_op.GetMetadata();
 		for(j = 0; j < metadata.mipLevels; j++)
 		{
@@ -1166,10 +1166,10 @@ void DDSArray::ScaleMipMapsAlphaForCoverage(MEXF_IN)
 	this->_arr = new_arr;
 }
 
-void DDSArray::PremultiplyAlpha(MEXF_IN)
+void DXTImageArray::PremultiplyAlpha(MEXF_IN)
 {
 	size_t i;
-	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	DXTImage* new_arr = AllocateDXTImageArray(this->_size, this->_arr);
 	DWORD pmalpha_flags = DirectX::TEX_PMALPHA_DEFAULT;
 	if(nrhs > 1)
 	{
@@ -1178,13 +1178,13 @@ void DDSArray::PremultiplyAlpha(MEXF_IN)
 	
 	if(nrhs == 1)
 	{
-		DDSArray::ParseFlags(prhs[0], g_pmflag_map, pmalpha_flags);
+		DXTImageArray::ParseFlags(prhs[0], g_pmflag_map, pmalpha_flags);
 	}
 	
 	for(i = 0; i < this->_size; i++)
 	{
-		DDS& pre_op  = this->GetDDS(i);
-		DDS& post_op = new_arr[i];
+		DXTImage& pre_op  = this->GetDXTImage(i);
+		DXTImage& post_op = new_arr[i];
 		hres = DirectX::PremultiplyAlpha(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), pmalpha_flags, post_op);
 		if(FAILED(hres))
 		{
@@ -1195,11 +1195,11 @@ void DDSArray::PremultiplyAlpha(MEXF_IN)
 	this->_arr = new_arr;
 }
 
-void DDSArray::Compress(MEXF_IN)
+void DXTImageArray::Compress(MEXF_IN)
 {
 	size_t i;
 	DXGI_FORMAT fmt;
-	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	DXTImage* new_arr = AllocateDXTImageArray(this->_size, this->_arr);
 	DWORD compress_flags  = DirectX::TEX_COMPRESS_DEFAULT;
 	float threshold = DirectX::TEX_THRESHOLD_DEFAULT;
 	if(nrhs < 1)
@@ -1211,13 +1211,13 @@ void DDSArray::Compress(MEXF_IN)
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
 	}
 	
-	fmt = DDSArray::ParseFormat(prhs[0]);
+	fmt = DXTImageArray::ParseFormat(prhs[0]);
 	
 	if(nrhs > 1)
 	{
 		if(mxIsChar(prhs[1]))
 		{
-			DDSArray::ParseFlags(prhs[1], g_compressflag_map, compress_flags);
+			DXTImageArray::ParseFlags(prhs[1], g_compressflag_map, compress_flags);
 			if(nrhs > 2)
 			{
 				if(!mxIsScalar(prhs[2]))
@@ -1247,8 +1247,8 @@ void DDSArray::Compress(MEXF_IN)
 	
 	for(i = 0; i < this->_size; i++)
 	{
-		DDS& pre_op  = this->GetDDS(i);
-		DDS& post_op = new_arr[i];
+		DXTImage& pre_op  = this->GetDXTImage(i);
+		DXTImage& post_op = new_arr[i];
 		hres = DirectX::Compress(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), fmt, compress_flags, threshold, post_op);
 		if(FAILED(hres))
 		{
@@ -1259,10 +1259,10 @@ void DDSArray::Compress(MEXF_IN)
 	this->_arr = new_arr;
 }
 
-void DDSArray::Decompress(MEXF_IN)
+void DXTImageArray::Decompress(MEXF_IN)
 {
 	size_t i;
-	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	DXTImage* new_arr = AllocateDXTImageArray(this->_size, this->_arr);
 	DXGI_FORMAT fmt = DXGI_FORMAT_UNKNOWN;
 	if(nrhs > 1)
 	{
@@ -1271,13 +1271,13 @@ void DDSArray::Decompress(MEXF_IN)
 	
 	if(nrhs == 1)
 	{
-		fmt = DDSArray::ParseFormat(prhs[0]);
+		fmt = DXTImageArray::ParseFormat(prhs[0]);
 	}
 	
 	for(i = 0; i < this->_size; i++)
 	{
-		DDS& pre_op  = this->GetDDS(i);
-		DDS& post_op = new_arr[i];
+		DXTImage& pre_op  = this->GetDXTImage(i);
+		DXTImage& post_op = new_arr[i];
 		hres = DirectX::Decompress(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), fmt, post_op);
 		if(FAILED(hres))
 		{
@@ -1288,10 +1288,10 @@ void DDSArray::Decompress(MEXF_IN)
 	this->_arr = new_arr;
 }
 
-void DDSArray::ComputeNormalMap(MEXF_IN)
+void DXTImageArray::ComputeNormalMap(MEXF_IN)
 {
 	size_t i;
-	DDS* new_arr = AllocateDDSArray(this->_size, this->_arr);
+	DXTImage* new_arr = AllocateDXTImageArray(this->_size, this->_arr);
 	DXGI_FORMAT fmt;
 	float amplitude;
 	DWORD cn_flags  = DirectX::CNMAP_DEFAULT;
@@ -1304,7 +1304,7 @@ void DDSArray::ComputeNormalMap(MEXF_IN)
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
 	}
 	
-	fmt = DDSArray::ParseFormat(prhs[0]);
+	fmt = DXTImageArray::ParseFormat(prhs[0]);
 	
 	if(!mxIsDouble(prhs[1]) || !mxIsScalar(prhs[1]))
 	{
@@ -1314,13 +1314,13 @@ void DDSArray::ComputeNormalMap(MEXF_IN)
 	
 	if(nrhs == 3)
 	{
-		DDSArray::ParseFlags(prhs[2], g_cnflag_map, cn_flags);
+		DXTImageArray::ParseFlags(prhs[2], g_cnflag_map, cn_flags);
 	}
 	
 	for(i = 0; i < this->_size; i++)
 	{
-		DDS& pre_op  = this->GetDDS(i);
-		DDS& post_op = new_arr[i];
+		DXTImage& pre_op  = this->GetDXTImage(i);
+		DXTImage& post_op = new_arr[i];
 		hres = DirectX::ComputeNormalMap(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), cn_flags, amplitude, fmt, post_op);
 		if(FAILED(hres))
 		{
@@ -1331,7 +1331,7 @@ void DDSArray::ComputeNormalMap(MEXF_IN)
 	this->_arr = new_arr;
 }
 
-void DDSArray::CopyRectangle(DDSArray& src, DDSArray& dst, MEXF_IN)
+void DXTImageArray::CopyRectangle(DXTImageArray& src, DXTImageArray& dst, MEXF_IN)
 {
 	size_t i, j;
 	DWORD filter_flags  = DirectX::TEX_FILTER_DEFAULT;
@@ -1364,7 +1364,7 @@ void DDSArray::CopyRectangle(DDSArray& src, DDSArray& dst, MEXF_IN)
 	
 	if(nrhs == 3)
 	{
-		DDSArray::ParseFlags(prhs[2], g_filterflag_map, filter_flags);
+		DXTImageArray::ParseFlags(prhs[2], g_filterflag_map, filter_flags);
 	}
 	
 	if(src._size != dst._size)
@@ -1374,8 +1374,8 @@ void DDSArray::CopyRectangle(DDSArray& src, DDSArray& dst, MEXF_IN)
 	
 	for(i = 0; i < src._size; i++)
 	{
-		DDS& pre_op  = src.GetDDS(i);
-		DDS& post_op = dst.GetDDS(i);
+		DXTImage& pre_op  = src.GetDXTImage(i);
+		DXTImage& post_op = dst.GetDXTImage(i);
 		
 		if(pre_op.GetImageCount() != post_op.GetImageCount())
 		{
@@ -1395,7 +1395,7 @@ void DDSArray::CopyRectangle(DDSArray& src, DDSArray& dst, MEXF_IN)
 	}
 }
 
-void DDSArray::ComputeMSE(DDSArray& ddsarray1, DDSArray& ddsarray2, MEXF_SIG)
+void DXTImageArray::ComputeMSE(DXTImageArray& dxtimagearray1, DXTImageArray& dxtimagearray2, MEXF_SIG)
 {
 	size_t i;
 	DWORD cmse_flags = DirectX::CMSE_DEFAULT;
@@ -1406,24 +1406,24 @@ void DDSArray::ComputeMSE(DDSArray& ddsarray1, DDSArray& ddsarray2, MEXF_SIG)
 	
 	if(nrhs == 1)
 	{
-		DDSArray::ParseFlags(prhs[2], g_cmseflag_map, cmse_flags);
+		DXTImageArray::ParseFlags(prhs[2], g_cmseflag_map, cmse_flags);
 	}
 	
-	if(ddsarray1._size != ddsarray2._size)
+	if(dxtimagearray1._size != dxtimagearray2._size)
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputMismatchError", "The comparison arguments are not the same size.");
 	}
 	
-	if(ddsarray1._size == 1)
+	if(dxtimagearray1._size == 1)
 	{
 		if(nlhs > 1)
 		{
 			mxArray* tmp[2];
-			plhs[0] = mxCreateCellMatrix(ddsarray1.GetM(), ddsarray1.GetN());
-			plhs[1] = mxCreateCellMatrix(ddsarray1.GetM(), ddsarray1.GetN());
-			for(i = 0; i < ddsarray1.GetSize(); i++)
+			plhs[0] = mxCreateCellMatrix(dxtimagearray1.GetM(), dxtimagearray1.GetN());
+			plhs[1] = mxCreateCellMatrix(dxtimagearray1.GetM(), dxtimagearray1.GetN());
+			for(i = 0; i < dxtimagearray1.GetSize(); i++)
 			{
-				DDSArray::ComputeMSE(ddsarray1.GetDDS(i), ddsarray2.GetDDS(i), cmse_flags, tmp[0], tmp[1]);
+				DXTImageArray::ComputeMSE(dxtimagearray1.GetDXTImage(i), dxtimagearray2.GetDXTImage(i), cmse_flags, tmp[0], tmp[1]);
 				mxSetCell(plhs[0], i, tmp[0]);
 				mxSetCell(plhs[1], i, tmp[1]);
 			}
@@ -1431,10 +1431,10 @@ void DDSArray::ComputeMSE(DDSArray& ddsarray1, DDSArray& ddsarray2, MEXF_SIG)
 		else
 		{
 			mxArray* tmp;
-			plhs[0] = mxCreateCellMatrix(ddsarray1.GetM(), ddsarray1.GetN());
-			for(i = 0; i < ddsarray1.GetSize(); i++)
+			plhs[0] = mxCreateCellMatrix(dxtimagearray1.GetM(), dxtimagearray1.GetN());
+			for(i = 0; i < dxtimagearray1.GetSize(); i++)
 			{
-				DDSArray::ComputeMSE(ddsarray1.GetDDS(i), ddsarray2.GetDDS(i), cmse_flags, tmp);
+				DXTImageArray::ComputeMSE(dxtimagearray1.GetDXTImage(i), dxtimagearray2.GetDXTImage(i), cmse_flags, tmp);
 				mxSetCell(plhs[0], i, tmp);
 			}
 		}
@@ -1443,42 +1443,42 @@ void DDSArray::ComputeMSE(DDSArray& ddsarray1, DDSArray& ddsarray2, MEXF_SIG)
 	{
 		if(nlhs > 1)
 		{
-			DDSArray::ComputeMSE(ddsarray1.GetDDS(0), ddsarray2.GetDDS(0), cmse_flags, plhs[0], plhs[1]);
+			DXTImageArray::ComputeMSE(dxtimagearray1.GetDXTImage(0), dxtimagearray2.GetDXTImage(0), cmse_flags, plhs[0], plhs[1]);
 		}
 		else
 		{
-			DDSArray::ComputeMSE(ddsarray1.GetDDS(0), ddsarray2.GetDDS(0), cmse_flags, plhs[0]);
+			DXTImageArray::ComputeMSE(dxtimagearray1.GetDXTImage(0), dxtimagearray2.GetDXTImage(0), cmse_flags, plhs[0]);
 		}
 	}
 }
 
-void DDSArray::ComputeMSE(DDS& dds1, DDS& dds2, DWORD cmse_flags, mxArray*& mx_dds_mse, mxArray*& mx_dds_mseV)
+void DXTImageArray::ComputeMSE(DXTImage& dxtimage1, DXTImage& dxtimage2, DWORD cmse_flags, mxArray*& mx_dxtimage_mse, mxArray*& mx_dxtimage_mseV)
 {
 	int i, j, k;
 	mxArray* tmp_mse,* tmp_mseV;
-	if(dds1.GetImageCount() != dds2.GetImageCount())
+	if(dxtimage1.GetImageCount() != dxtimage2.GetImageCount())
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputMismatchError", "The source and destination arguments are not the same size.");
 	}
-	if(dds1.GetImageCount() == 1)
+	if(dxtimage1.GetImageCount() == 1)
 	{
-		DDSArray::ComputeMSE(dds1.GetImage(0, 0, 0), dds2.GetImage(0, 0, 0), cmse_flags, mx_dds_mse, mx_dds_mseV);
+		DXTImageArray::ComputeMSE(dxtimage1.GetImage(0, 0, 0), dxtimage2.GetImage(0, 0, 0), cmse_flags, mx_dxtimage_mse, mx_dxtimage_mseV);
 	}
 	else
 	{
-		DirectX::TexMetadata metadata = dds1.GetMetadata();
+		DirectX::TexMetadata metadata = dxtimage1.GetMetadata();
 		size_t depth = metadata.depth;
-		mx_dds_mse = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
-		mx_dds_mseV = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
+		mx_dxtimage_mse = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
+		mx_dxtimage_mseV = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
 		for(i = 0; i < metadata.mipLevels; i++)
 		{
 			for(j = 0; j < metadata.arraySize; j++)
 			{
 				for(k = 0; k < depth; k++)
 				{
-					DDSArray::ComputeMSE(dds1.GetImage(i, j, k), dds2.GetImage(i, j, k), cmse_flags, tmp_mse, tmp_mseV);
-					mxSetCell(mx_dds_mse,  dds1.ComputeIndexMEX(i, j, k), tmp_mse);
-					mxSetCell(mx_dds_mseV, dds1.ComputeIndexMEX(i, j, k), tmp_mseV);
+					DXTImageArray::ComputeMSE(dxtimage1.GetImage(i, j, k), dxtimage2.GetImage(i, j, k), cmse_flags, tmp_mse, tmp_mseV);
+					mxSetCell(mx_dxtimage_mse,  dxtimage1.ComputeIndexMEX(i, j, k), tmp_mse);
+					mxSetCell(mx_dxtimage_mseV, dxtimage1.ComputeIndexMEX(i, j, k), tmp_mseV);
 				}
 			}
 			if(depth > 1)
@@ -1489,31 +1489,31 @@ void DDSArray::ComputeMSE(DDS& dds1, DDS& dds2, DWORD cmse_flags, mxArray*& mx_d
 	}
 }
 
-void DDSArray::ComputeMSE(DDS& dds1, DDS& dds2, DWORD cmse_flags, mxArray*& mx_dds_mse)
+void DXTImageArray::ComputeMSE(DXTImage& dxtimage1, DXTImage& dxtimage2, DWORD cmse_flags, mxArray*& mx_dxtimage_mse)
 {
 	int i, j, k;
 	mxArray* tmp_mse;
-	if(dds1.GetImageCount() != dds2.GetImageCount())
+	if(dxtimage1.GetImageCount() != dxtimage2.GetImageCount())
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InputMismatchError", "The source and destination arguments are not the same size.");
 	}
-	if(dds1.GetImageCount() == 1)
+	if(dxtimage1.GetImageCount() == 1)
 	{
-		DDSArray::ComputeMSE(dds1.GetImage(0, 0, 0), dds2.GetImage(0, 0, 0), cmse_flags, mx_dds_mse);
+		DXTImageArray::ComputeMSE(dxtimage1.GetImage(0, 0, 0), dxtimage2.GetImage(0, 0, 0), cmse_flags, mx_dxtimage_mse);
 	}
 	else
 	{
-		DirectX::TexMetadata metadata = dds1.GetMetadata();
+		DirectX::TexMetadata metadata = dxtimage1.GetMetadata();
 		size_t depth = metadata.depth;
-		mx_dds_mse = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
+		mx_dxtimage_mse = mxCreateCellMatrix(max(metadata.arraySize, metadata.depth), metadata.mipLevels);
 		for(i = 0; i < metadata.mipLevels; i++)
 		{
 			for(j = 0; j < metadata.arraySize; j++)
 			{
 				for(k = 0; k < depth; k++)
 				{
-					DDSArray::ComputeMSE(dds1.GetImage(i, j, k), dds2.GetImage(i, j, k), cmse_flags, tmp_mse);
-					mxSetCell(mx_dds_mse,  dds1.ComputeIndexMEX(i, j, k), tmp_mse);
+					DXTImageArray::ComputeMSE(dxtimage1.GetImage(i, j, k), dxtimage2.GetImage(i, j, k), cmse_flags, tmp_mse);
+					mxSetCell(mx_dxtimage_mse,  dxtimage1.ComputeIndexMEX(i, j, k), tmp_mse);
 				}
 			}
 			if(depth > 1)
@@ -1524,7 +1524,7 @@ void DDSArray::ComputeMSE(DDS& dds1, DDS& dds2, DWORD cmse_flags, mxArray*& mx_d
 	}
 }
 
-void DDSArray::ComputeMSE(const DirectX::Image* img1, const DirectX::Image* img2, DWORD cmse_flags, mxArray*& mx_ddsslice_mse)
+void DXTImageArray::ComputeMSE(const DirectX::Image* img1, const DirectX::Image* img2, DWORD cmse_flags, mxArray*& mx_dxtimageslice_mse)
 {
 	float mse;
 	hres = DirectX::ComputeMSE(*img1, *img2, mse, nullptr, cmse_flags);
@@ -1532,10 +1532,10 @@ void DDSArray::ComputeMSE(const DirectX::Image* img1, const DirectX::Image* img2
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ComputeMSEError", "There was an error while computing the mean-squared error.");
 	}
-	mx_ddsslice_mse = mxCreateDoubleScalar((double)mse);
+	mx_dxtimageslice_mse = mxCreateDoubleScalar((double)mse);
 }
 
-void DDSArray::ComputeMSE(const DirectX::Image* img1, const DirectX::Image* img2, DWORD cmse_flags, mxArray*& mx_ddsslice_mse, mxArray*& mx_ddsslice_mseV)
+void DXTImageArray::ComputeMSE(const DirectX::Image* img1, const DirectX::Image* img2, DWORD cmse_flags, mxArray*& mx_dxtimageslice_mse, mxArray*& mx_dxtimageslice_mseV)
 {
 	float mse;
 	float mseV[4];
@@ -1544,16 +1544,16 @@ void DDSArray::ComputeMSE(const DirectX::Image* img1, const DirectX::Image* img2
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_HRESULT, "ComputeMSEError", "There was an error while computing the mean-squared error.");
 	}
-	mx_ddsslice_mse = mxCreateDoubleScalar(mse);
-	mx_ddsslice_mseV = mxCreateDoubleMatrix(4, 1, mxREAL);
-	auto data = (double*)mxGetData(mx_ddsslice_mseV);
+	mx_dxtimageslice_mse = mxCreateDoubleScalar(mse);
+	mx_dxtimageslice_mseV = mxCreateDoubleMatrix(4, 1, mxREAL);
+	auto data = (double*)mxGetData(mx_dxtimageslice_mseV);
 	data[0] = (double)mseV[0];
 	data[1] = (double)mseV[1];
 	data[2] = (double)mseV[2];
 	data[3] = (double)mseV[3];
 }
 
-void DDSArray::SaveFile(MEXF_IN)
+void DXTImageArray::SaveFile(MEXF_IN)
 {
 	size_t i;
 	std::wstring filename;
@@ -1569,13 +1569,13 @@ void DDSArray::SaveFile(MEXF_IN)
 	
 	if(nrhs > 1)
 	{
-		DDSArray::ParseFlags(prhs[1], g_ctrlflag_map, ctrl_flags);
+		DXTImageArray::ParseFlags(prhs[1], g_ctrlflag_map, ctrl_flags);
 	}
 	
 	if(mxIsChar(prhs[0]))
 	{
-		DDSArray::ParseFilename(prhs[0], filename);
-		DDS& pre_op = this->GetDDS(0);
+		DXTImageArray::ParseFilename(prhs[0], filename);
+		DXTImage& pre_op = this->GetDXTImage(0);
 		hres = DirectX::SaveToDDSFile(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), ctrl_flags, filename.c_str());
 		if(FAILED(hres))
 		{
@@ -1592,8 +1592,8 @@ void DDSArray::SaveFile(MEXF_IN)
 		
 		for(i = 0; i < this->_size; i++)
 		{
-			DDSArray::ParseFilename(mxGetCell(prhs[0], i), filename);
-			DDS& pre_op = this->GetDDS(i);
+			DXTImageArray::ParseFilename(mxGetCell(prhs[0], i), filename);
+			DXTImage& pre_op = this->GetDXTImage(i);
 			hres = DirectX::SaveToDDSFile(pre_op.GetImages(), pre_op.GetImageCount(), pre_op.GetMetadata(), ctrl_flags, filename.c_str());
 			if(FAILED(hres))
 			{
@@ -1607,7 +1607,7 @@ void DDSArray::SaveFile(MEXF_IN)
 	}
 }
 
-void DDSArray::ToImage(MEXF_SIG)
+void DXTImageArray::ToImage(MEXF_SIG)
 {
 	size_t i;
 	if(this->_size == 1)
@@ -1649,7 +1649,7 @@ void DDSArray::ToImage(MEXF_SIG)
 	}
 }
 
-void DDSArray::ToMatrix(MEXF_SIG)
+void DXTImageArray::ToMatrix(MEXF_SIG)
 {
 	size_t i;
 	bool combine_alpha = false;
@@ -1716,22 +1716,22 @@ void DDSArray::ToMatrix(MEXF_SIG)
 	}
 }
 
-void DDSArray::ToExport(int nlhs, mxArray* plhs[])
+void DXTImageArray::ToExport(int nlhs, mxArray* plhs[])
 {
 	size_t i;
 	const char* fieldnames[] = {"Metadata", "Images"};
 	mxArray* out = mxCreateStructMatrix(this->_sz_m, this->_sz_n, 2, fieldnames);
 	for(i = 0; i < this->_size; i++)
 	{
-		mxSetField(out, i, "Metadata", this->GetDDS(i).ExportMetadata());
-		mxSetField(out, i, "Images", this->GetDDS(i).ExportImages());
+		mxSetField(out, i, "Metadata", this->GetDXTImage(i).ExportMetadata());
+		mxSetField(out, i, "Images", this->GetDXTImage(i).ExportImages());
 	}
 	plhs[0] = out;
 }
 
-DDSArray::operation DDSArray::GetOperation(const mxArray* directive)
+DXTImageArray::operation DXTImageArray::GetOperation(const mxArray* directive)
 {
-	DDSArray::operation op = NO_OP;
+	DXTImageArray::operation op = NO_OP;
 	if(!mxIsChar(directive))
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "InvalidDirectiveError", "The supplied directive must be of class 'char'.");

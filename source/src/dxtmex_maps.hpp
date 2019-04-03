@@ -3,7 +3,7 @@
 #include "directxtex.h"
 #include <unordered_map>
 
-namespace DDSMEX
+namespace DXTMEX
 {
 	class BiMap
 	{

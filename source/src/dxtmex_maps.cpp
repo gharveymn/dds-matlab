@@ -1,8 +1,8 @@
-#include "ddsmex_maps.hpp"
+#include "dxtmex_maps.hpp"
 
-using namespace DDSMEX;
+using namespace DXTMEX;
 
-BiMap DDSMEX::g_format_map
+BiMap DXTMEX::g_format_map
 {
 	{DXGI_FORMAT_UNKNOWN,                    "UNKNOWN"},
 	{DXGI_FORMAT_R32G32B32A32_TYPELESS,      "R32G32B32A32_TYPELESS"},
@@ -126,7 +126,7 @@ BiMap DDSMEX::g_format_map
 	{DXGI_FORMAT_FORCE_UINT,                 "FORCE_UINT"}
 };
 
-BiMap DDSMEX::g_ctrlflag_map
+BiMap DXTMEX::g_ctrlflag_map
 {
 	{DirectX::DDS_FLAGS_NONE,                 "None"},
 	{DirectX::DDS_FLAGS_LEGACY_DWORD,         "LEGACY_DWORD"},
@@ -140,7 +140,7 @@ BiMap DDSMEX::g_ctrlflag_map
 	{DirectX::DDS_FLAGS_FORCE_DX10_EXT_MISC2, "FORCE_DX10_EXT_MISC2"}
 };
 
-BiMap DDSMEX::g_filterflag_map
+BiMap DXTMEX::g_filterflag_map
 {
 	{DirectX::TEX_FILTER_DEFAULT,          "DEFAULT"},
 	{DirectX::TEX_FILTER_POINT,            "POINT"},
@@ -171,7 +171,7 @@ BiMap DDSMEX::g_filterflag_map
 	{DirectX::TEX_FILTER_FLOAT_X2BIAS,     "FLOAT_X2BIAS"}
 };
 
-BiMap DDSMEX::g_frflag_map
+BiMap DXTMEX::g_frflag_map
 {
 	{DirectX::TEX_FR_ROTATE0,         "ROTATE0"},
 	{DirectX::TEX_FR_ROTATE90,        "ROTATE90"},
@@ -181,7 +181,7 @@ BiMap DDSMEX::g_frflag_map
 	{DirectX::TEX_FR_FLIP_VERTICAL,   "FLIP_VERTICAL"}
 };
 
-BiMap DDSMEX::g_pmflag_map
+BiMap DXTMEX::g_pmflag_map
 {
 	{DirectX::TEX_PMALPHA_DEFAULT,      "DEFAULT"},
 	{DirectX::TEX_PMALPHA_IGNORE_SRGB,  "IGNORE_SRGB"},
@@ -191,7 +191,7 @@ BiMap DDSMEX::g_pmflag_map
 	{DirectX::TEX_PMALPHA_SRGB,         "SRGB"},
 };
 
-BiMap DDSMEX::g_compressflag_map
+BiMap DXTMEX::g_compressflag_map
 {
 	{DirectX::TEX_COMPRESS_DEFAULT,          "DEFAULT"},
 	{DirectX::TEX_COMPRESS_RGB_DITHER,       "RGB_DITHER"},
@@ -206,7 +206,7 @@ BiMap DDSMEX::g_compressflag_map
 	{DirectX::TEX_COMPRESS_PARALLEL,         "PARALLEL"}
 };
 
-BiMap DDSMEX::g_cnflag_map
+BiMap DXTMEX::g_cnflag_map
 {
 	{DirectX::CNMAP_DEFAULT, "DEFAULT"},
 	{DirectX::CNMAP_CHANNEL_RED, "CHANNEL_RED"},
@@ -221,7 +221,7 @@ BiMap DDSMEX::g_cnflag_map
 	{DirectX::CNMAP_COMPUTE_OCCLUSION, "COMPUTE_OCCLUSION"}
 };
 
-BiMap DDSMEX::g_cmseflag_map
+BiMap DXTMEX::g_cmseflag_map
 {
 	{DirectX::CMSE_DEFAULT, "DEFAULT"},
 	{DirectX::CMSE_IMAGE1_SRGB, "IMAGE1_SRGB"},

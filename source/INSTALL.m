@@ -1,5 +1,5 @@
 function INSTALL
-%% INSTALL  Run this file to compile <strong>ddsio</strong>.
+%% INSTALL  Run this file to compile <strong>dxtmex</strong>.
 %    The output is written to '../out/private'.
 %
 %    Thanks for downloading!
@@ -20,11 +20,11 @@ function INSTALL
 	end
 	
 	sources = {
-		'ddsmex.cpp',...
-		'ddsmex_mexerror.cpp',...
-		'ddsmex_mexutils.cpp',...
-		'ddsmex_dds.cpp',...
-		'ddsmex_maps.cpp'
+		'dxtmex.cpp',...
+		'dxtmex_mexerror.cpp',...
+		'dxtmex_mexutils.cpp',...
+		'dxtmex_dxtimage.cpp',...
+		'dxtmex_maps.cpp'
 		};
 
 	for i = 1:numel(sources)
@@ -45,7 +45,7 @@ function INSTALL
 % 		mexflags = [mexflags {'-compatibleArrayDims'}];
 % 	end
 
-	fprintf('-Compiling ddsmex...')
+	fprintf('-Compiling dxtmex...')
 	% mexflags = [mexflags {'COMPFLAGS="$COMPFLAGS -Wall"'}];
 	% mexflags = [mexflags {'CFLAGS="$CFLAGS -Wall -Werror -Wno-unused-function"'}];
 	mex(mexflags{:} , sources{:})

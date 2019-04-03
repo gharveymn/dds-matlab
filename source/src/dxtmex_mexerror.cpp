@@ -9,7 +9,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "mex.h"
-#include "ddsmex_mexerror.hpp"
+#include "dxtmex_mexerror.hpp"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -22,7 +22,7 @@
 HRESULT hres = 0;
 #endif
 
-#include "ddsmex_mexerror.hpp"
+#include "dxtmex_mexerror.hpp"
 
 #define VALUE_AS_STRING(value) #value
 #define EXPAND_AS_STRING(num) VALUE_AS_STRING(num)

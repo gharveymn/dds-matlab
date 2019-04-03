@@ -1,4 +1,4 @@
-classdef DdsSlice
+classdef DXTImageSlice
     
 	% DirectXTex Image properties
 	
@@ -10,14 +10,14 @@ classdef DdsSlice
 		Pixels
 	end
 	
-	% These should be given by Dds handler
+	% These should be given by DXTImage handler
 	properties (Access = protected)
 		FormatID
 		Flags
 	end
 	
 	methods
-		function obj = DdsSlice(images)
+		function obj = DXTImageSlice(images)
 			if(nargin > 0)
 				m = size(images,1);
 				n = size(images,2);
@@ -42,26 +42,26 @@ classdef DdsSlice
 		
 		function varargout = toimage(obj)
 			nout = max(nargout,1);
-			[varargout{1:nout}] = ddsmex('TO_IMAGE', struct(obj));
+			[varargout{1:nout}] = dxtmex('TO_IMAGE', struct(obj));
 		end
 		
 		function newdds = convert(obj, varargin)
-			newdds = Dds(ddsmex('CONVERT', struct(obj), varargin{:}));
+			newdds = DXTImage(dxtmex('CONVERT', struct(obj), varargin{:}));
 		end
 		
 		function newdds = flip(obj, flags)
-			newdds = Dds(ddsmex('FLIP_ROTATE', struct(obj), flags));
+			newdds = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), flags));
 		end
 		
 		function newdds = rotate(obj, flags)
-			newdds = Dds(ddsmex('FLIP_ROTATE', struct(obj), flags));
+			newdds = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), flags));
 		end
 		
 		function newdds = decompress(obj,fmt)
 			if(nargin == 2)
-				newdds = Dds(ddsmex('DECOMPRESS', struct(obj), fmt));
+				newdds = DXTImage(dxtmex('DECOMPRESS', struct(obj), fmt));
 			else
-				newdds = Dds(ddsmex('DECOMPRESS', struct(obj)));
+				newdds = DXTImage(dxtmex('DECOMPRESS', struct(obj)));
 			end
 		end
 		

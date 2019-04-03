@@ -1,6 +1,6 @@
 #pragma once
 
-namespace DDSMEX
+namespace DXTMEX
 {
 	namespace MEXUtils
 	{

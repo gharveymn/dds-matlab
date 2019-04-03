@@ -1,4 +1,4 @@
-classdef Dds
+classdef DXTImage
 	%DDS Summary of this class goes here
 	%   Detailed explanation goes here
 	
@@ -15,14 +15,14 @@ classdef Dds
 	end
 	
 	methods
-		function obj = Dds(s)
+		function obj = DXTImage(s)
 			if(nargin > 0)
 				m = size(s,1);
 				n = size(s,2);
 				for i = m:-1:1
 					for j = n:-1:1
 						obj(i,j).Metadata = s(i,j).Metadata;
-						obj(i,j).Images = DdsSlice(s(i,j).Images);
+						obj(i,j).Images = DXTImageSlice(s(i,j).Images);
 					end
 				end
 			end
@@ -41,7 +41,7 @@ classdef Dds
 						case 'flat'
 							h = dispflat(obj);
 						otherwise
-							error('Dds:InvalidOptionError',['Invalid option ''' option '''.']);
+							error('DXTImage:InvalidOptionError',['Invalid option ''' option '''.']);
 					end
 				else
 					h = dispflat(obj);
@@ -52,30 +52,34 @@ classdef Dds
 		end
 		
 		function newdds = getMipLevel(obj, lvl)
-			newdds = Dds;
+			newdds = DXTImage;
 			newdds.Metadata = obj.Metadata;
 			newdds.Metadata.MipLevels = 1;
 			newdds.Images = obj.Images(:, lvl);
 		end
 		
 		function newdds = convert(obj, varargin)
-			newdds = Dds(ddsmex('CONVERT', struct(obj), varargin{:}));
+			newdds = DXTImage(dxtmex('CONVERT', struct(obj), varargin{:}));
 		end
 		
 		function newdds = flip(obj, flags)
-			newdds = Dds(ddsmex('FLIP_ROTATE',struct(obj), flags));
+			newdds = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), flags));
 		end
 		
 		function newdds = rotate(obj, flags)
-			newdds = Dds(ddsmex('FLIP_ROTATE',struct(obj), flags));
+			newdds = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), flags));
 		end
 		
 		function newdds = decompress(obj,fmt)
 			if(nargin == 2)
-				newdds = Dds(ddsmex('DECOMPRESS', struct(obj), fmt));
+				newdds = DXTImage(dxtmex('DECOMPRESS', struct(obj), fmt));
 			else
-				newdds = Dds(ddsmex('DECOMPRESS', struct(obj)));
+				newdds = DXTImage(dxtmex('DECOMPRESS', struct(obj)));
 			end
+		end
+		
+		function save(obj, varargin)
+			dxtmex('SAVE_FILE', struct(obj), varargin{:});
 		end
 		
 		function s = struct(obj)
@@ -213,11 +217,11 @@ classdef Dds
 	
 	methods (Static)
 		function obj = read(varargin)
-			obj = Dds(ddsmex('READ_FILE',varargin{:}));
+			obj = DXTImage(dxtmex('READ_DDS',varargin{:}));
 		end
 		
 		function metadata = finfo(varargin)
-			metadata = ddsmex('READ_META', varargin{:});
+			metadata = dxtmex('READ_META', varargin{:});
 		end
 	end
 	
