@@ -51,35 +51,72 @@ classdef DXTImage
 			end
 		end
 		
-		function newdds = getMipLevel(obj, lvl)
-			newdds = DXTImage;
-			newdds.Metadata = obj.Metadata;
-			newdds.Metadata.MipLevels = 1;
-			newdds.Images = obj.Images(:, lvl);
+		function obj = getMipLevel(obj, lvl)
+			obj = DXTImage;
+			obj.Metadata = obj.Metadata;
+			obj.Metadata.MipLevels = 1;
+			obj.Images = obj.Images(:, lvl);
 		end
 		
-		function newdds = convert(obj, varargin)
-			newdds = DXTImage(dxtmex('CONVERT', struct(obj), varargin{:}));
+		function ddswrite(obj, varargin)
+			dxtmex('WRITE_DDS', struct(obj), varargin{:});
 		end
 		
-		function newdds = flip(obj, flags)
-			newdds = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), flags));
+		function hdrwrite(obj, varargin)
+			dxtmex('WRITE_HDR', struct(obj), varargin{:});
 		end
 		
-		function newdds = rotate(obj, flags)
-			newdds = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), flags));
+		function tgawrite(obj, varargin)
+			dxtmex('WRITE_TGA', struct(obj), varargin{:});
 		end
 		
-		function newdds = decompress(obj,fmt)
-			if(nargin == 2)
-				newdds = DXTImage(dxtmex('DECOMPRESS', struct(obj), fmt));
-			else
-				newdds = DXTImage(dxtmex('DECOMPRESS', struct(obj)));
-			end
+		function obj = flip(obj, varargin)
+			obj = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), varargin{:}));
 		end
 		
-		function save(obj, varargin)
-			dxtmex('SAVE_FILE', struct(obj), varargin{:});
+		function obj = rotate(obj, varargin)
+			obj = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), varargin{:}));
+		end
+		
+		function obj = resize(obj, varargin)
+			obj = DXTImage(dxtmex('RESIZE', struct(obj), varargin{:}));
+		end
+		
+		function obj = convert(obj, varargin)
+			obj = DXTImage(dxtmex('CONVERT', struct(obj), varargin{:}));
+		end
+		
+		function obj = convertToSinglePlane(obj, varargin)
+			obj = DXTImage(dxtmex('CONVERT_TO_SINGLE_PLANE', struct(obj), varargin{:}));
+		end
+		
+		function obj = generateMipMaps(obj, varargin)
+			obj = DXTImage(dxtmex('GENERATE_MIPMAPS', struct(obj), varargin{:}));
+		end
+		function obj = generateMipMaps3D(obj, varargin)
+			obj = DXTImage(dxtmex('GENERATE_MIPMAPS_3D', struct(obj), varargin{:}));
+		end
+		function obj = scaleMipMapsAlphaForCoverage(obj, varargin)
+			obj = DXTImage(dxtmex('SCALE_MIPMAPS_ALPHA_FOR_COVERAGE', struct(obj), varargin{:}));
+		end
+		function obj = premultiplyAlpha(obj, varargin)
+			obj = DXTImage(dxtmex('PREMULTIPLY_ALPHA', struct(obj), varargin{:}));
+		end
+		
+		function obj = compress(obj, varargin)
+			obj = DXTImage(dxtmex('COMPRESS', struct(obj), varargin{:}));
+		end
+		
+		function obj = decompress(obj, varargin)
+			obj = DXTImage(dxtmex('DECOMPRESS', struct(obj), varargin{:}));
+		end
+		
+		function obj = computeNormalMap(obj, varargin)
+			obj = DXTImage(dxtmex('COMPUTE_NORMAL_MAP', struct(obj), varargin{:}));
+		end
+		
+		function obj = copyRectangle(obj, src, varargin)
+			obj = DXTImage(dxtmex('COPY_RECTANGLE', struct(obj), struct(src), varargin{:}));
 		end
 		
 		function s = struct(obj)
@@ -216,13 +253,39 @@ classdef DXTImage
 	
 	
 	methods (Static)
-		function obj = read(varargin)
+		function obj = ddsread(varargin)
 			obj = DXTImage(dxtmex('READ_DDS',varargin{:}));
 		end
 		
-		function metadata = finfo(varargin)
-			metadata = dxtmex('READ_META', varargin{:});
+		function obj = hdrread(varargin)
+			obj = DXTImage(dxtmex('READ_HDR',varargin{:}));
 		end
+		
+		function obj = tgaread(varargin)
+			obj = DXTImage(dxtmex('READ_TGA',varargin{:}));
+		end
+		
+		function metadata = ddsfinfo(varargin)
+			metadata = dxtmex('READ_DDS_META', varargin{:});
+		end
+		
+		function metadata = hdrfinfo(varargin)
+			metadata = dxtmex('READ_HDR_META', varargin{:});
+		end
+		
+		function metadata = tgafinfo(varargin)
+			metadata = dxtmex('READ_TGA_META', varargin{:});
+		end
+		
+		function [varargout] = computeMSE(cmp1, cmp2, varargin)
+			if(nargout == 0)
+				varargout{1} = DXTImage(dxtmex('COMPUTE_MSE', struct(cmp1), struct(cmp2), varargin{:}));
+			else
+				varargout{1:nargout} = DXTImage(dxtmex('COMPUTE_MSE', struct(cmp1), struct(cmp2), varargin{:}));
+			end
+			
+		end
+		
 	end
 	
 end

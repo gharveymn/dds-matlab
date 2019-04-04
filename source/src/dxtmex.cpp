@@ -34,16 +34,39 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	
 	switch(op)
 	{
-		case DXTImageArray::READ_DDS_FILE:
+		case DXTImageArray::READ_DDS:
 		{
-			DXTImageArray::ReadDDSFile(nlhs, plhs, num_in, in);
+			DXTImageArray::ReadDDS(nlhs, plhs, num_in, in);
+			return;
+		}
+		case DXTImageArray::READ_HDR:
+		{
+			DXTImageArray::ReadDDS(nlhs, plhs, num_in, in);
+			return;
+		}
+		case DXTImageArray::READ_TGA:
+		{
+			DXTImageArray::ReadDDS(nlhs, plhs, num_in, in);
 			return;
 		}
 		case DXTImageArray::READ_DDS_META:
 		{
-			DXTImageArray::ReadMetadata(nlhs, plhs, num_in, in);
+			DXTImageArray::ReadDDSMetadata(nlhs, plhs, num_in, in);
 			return;
 		}
+		case DXTImageArray::READ_HDR_META:
+		{
+			DXTImageArray::ReadHDRMetadata(nlhs, plhs, num_in, in);
+			return;
+		}
+		case DXTImageArray::READ_TGA_META:
+		{
+			DXTImageArray::ReadTGAMetadata(nlhs, plhs, num_in, in);
+			return;
+		}
+		case DXTImageArray::WRITE_DDS:
+		case DXTImageArray::WRITE_HDR:
+		case DXTImageArray::WRITE_TGA:
 		case DXTImageArray::FLIP_ROTATE:
 		case DXTImageArray::RESIZE:
 		case DXTImageArray::CONVERT:
@@ -57,7 +80,6 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		case DXTImageArray::COMPUTE_NORMAL_MAP:
 		case DXTImageArray::COPY_RECTANGLE:
 		case DXTImageArray::COMPUTE_MSE:
-		case DXTImageArray::SAVE_FILE:
 		case DXTImageArray::TO_IMAGE:
 		case DXTImageArray::TO_MATRIX:
 		{
@@ -71,11 +93,31 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		}
 	}
 	
+	if(dxtimage_array.GetSize() < 1)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL, "NoImageSuppliedError", "No images were supplied. Cannot continue.");
+	}
+	
 	int num_options              = num_in-1;
 	const mxArray** options      = in+1;
 	
 	switch(op)
 	{
+		case DXTImageArray::WRITE_DDS:
+		{
+			dxtimage_array.WriteDDS(num_options, options);
+			return; // EARLY RETURN
+		}
+		case DXTImageArray::WRITE_HDR:
+		{
+			dxtimage_array.WriteHDR(num_options, options);
+			return; // EARLY RETURN
+		}
+		case DXTImageArray::WRITE_TGA:
+		{
+			dxtimage_array.WriteTGA(num_options, options);
+			return; // EARLY RETURN
+		}
 		case DXTImageArray::TO_IMAGE:
 		{
 			dxtimage_array.ToImage(nlhs, plhs, num_options, options);
@@ -138,14 +180,13 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		}
 		case DXTImageArray::COPY_RECTANGLE:
 		{
-			DXTImageArray dxtimage_dst;
+			DXTImageArray dxtimage_src;
 			if(num_options < 1)
 			{
 				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughArgumentsError", "Not enough arguments. Please supply a destination image.");
 			}
-			dxtimage_dst.Import(num_options, options);
-			DXTImageArray::CopyRectangle(dxtimage_array, dxtimage_dst, num_options-1, options+1);
-			dxtimage_array = dxtimage_dst;
+			dxtimage_src.Import(num_options, options);
+			DXTImageArray::CopyRectangle(dxtimage_array, dxtimage_src, num_options-1, options+1);
 			break;
 		}
 		case DXTImageArray::COMPUTE_MSE:
@@ -157,11 +198,6 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 			}
 			dxtimage_cmp.Import(num_options, options);
 			DXTImageArray::ComputeMSE(dxtimage_array, dxtimage_cmp, nlhs, plhs, num_options, options);
-			return; // EARLY RETURN
-		}
-		case DXTImageArray::SAVE_FILE:
-		{
-			dxtimage_array.SaveFile(num_options, options);
 			return; // EARLY RETURN
 		}
 		default:

@@ -10,7 +10,7 @@ function INSTALL
 	
 	output_path  = fullfile(thisfolder,'..', 'out', 'private');
 	header_path  = fullfile(thisfolder, 'src', 'headers');
-	library_path = fullfile(thisfolder, 'lib', 'x64');
+	library_path = fullfile(thisfolder, 'lib', 'DirectXTex', 'DirectXTex', 'Bin', 'Desktop_2017', 'x64', 'Release');
 
 	mexflags = {'-O', '-v', '-outdir', output_path, ...
 		['-I' header_path], ['-L' library_path], '-lDirectXTex'};

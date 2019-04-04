@@ -31,7 +31,7 @@ namespace DXTMEX
 		}
 		
 		
-		auto find(const size_t &key)
+		auto find(const size_t& key)
 		{
 			return i2s.find(key);
 		}

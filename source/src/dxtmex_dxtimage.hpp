@@ -10,23 +10,6 @@
 
 namespace DXTMEX
 {
-	// Read                            | DONE
-	// ReadMetadata                    | DONE
-	// FlipRotate                      | DONE
-	// Resize                          |
-	// Convert                         | DONE
-	// ConvertToSinglePlane            |
-	// GenerateMipMaps                 |
-	// GenerateMipMaps3D               |
-	// ScaleMipMapsAlphaForCoverage    |
-	// PremultiplyAlpha                |
-	// Compress                        |
-	// Decompress                      | DONE
-	// ComputeNormalMap                |
-	// ComputeMSE                      |
-	
-	// ToImageMatrix                   | PARTIAL
-	// ToMatrix                        | PARTIAL
 	
 	class DXTImage : public DirectX::ScratchImage
 	{
@@ -67,6 +50,12 @@ namespace DXTMEX
 		void ToMatrix  (mxArray*& mx_dxtimage_rgb, bool combine_alpha);
 		void ToMatrix  (mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a);
 		
+		void WriteHDR(std::wstring &filename, std::wstring &ext, bool remove_idx_if_singular = false);
+		void WriteHDR(std::wstring &filename, size_t mip, size_t item, size_t slice);
+		
+		void WriteTGA(std::wstring &filename, std::wstring &ext, bool remove_idx_if_singular = false);
+		void WriteTGA(std::wstring &filename, size_t mip, size_t item, size_t slice);
+		
 	private:
 		DWORD _flags;
 		
@@ -104,10 +93,9 @@ namespace DXTMEX
 		DXTImageArray& operator=(DXTImageArray&& in) = default;
 		
 		/* initializers */
-		void ReadDDSFile                 (MEXF_IN);
-		void ReadHDRFile                 (MEXF_IN);
-		void ReadTGAFile                 (MEXF_IN);
-		void ReadEXRFile                 (MEXF_IN);
+		void ReadDDS                     (MEXF_IN);
+		void ReadHDR                     (MEXF_IN);
+		void ReadTGA                     (MEXF_IN);
 		void Import                      (MEXF_IN);
 		
 		/* utilities */
@@ -121,51 +109,51 @@ namespace DXTMEX
 		void PremultiplyAlpha            (MEXF_IN);
 		void Compress                    (MEXF_IN);
 		void Decompress                  (MEXF_IN);
-		static void CopyRectangle        (DXTImageArray& src, DXTImageArray& dst, MEXF_IN);
 		void ComputeNormalMap            (MEXF_IN);
+		static void CopyRectangle        (DXTImageArray& dst, DXTImageArray& src, MEXF_IN);
 		static void ComputeMSE           (DXTImageArray& dxtimagearray1, DXTImageArray& dxtimagearray2, MEXF_SIG);
 		
-		void SaveFile                    (MEXF_IN);
+		void WriteDDS                    (MEXF_IN);
+		void WriteHDR                    (MEXF_IN);
+		void WriteTGA                    (MEXF_IN);
 		
 		void ToImage                     (MEXF_SIG);
 		void ToMatrix                    (MEXF_SIG);
 		
 		void ToExport                    (MEXF_OUT);
 		
-		static void ReadDDSFile          (MEXF_SIG)
+		static void ReadDDS(MEXF_SIG)
 		{
 			DXTImageArray dxtimage_array;
-			dxtimage_array.ReadDDSFile(nrhs, prhs);
+			dxtimage_array.ReadDDS(nrhs, prhs);
 			dxtimage_array.ToExport(nlhs, plhs);
 		}
 		
-		static void ReadHDRFile          (MEXF_SIG)
+		static void ReadHDR(MEXF_SIG)
 		{
 			DXTImageArray dxtimage_array;
-			dxtimage_array.ReadHDRFile(nrhs, prhs);
+			dxtimage_array.ReadHDR(nrhs, prhs);
 			dxtimage_array.ToExport(nlhs, plhs);
 		}
 		
-		static void ReadTGAFile          (MEXF_SIG)
+		static void ReadTGA          (MEXF_SIG)
 		{
 			DXTImageArray dxtimage_array;
-			dxtimage_array.ReadTGAFile(nrhs, prhs);
+			dxtimage_array.ReadTGA(nrhs, prhs);
 			dxtimage_array.ToExport(nlhs, plhs);
 		}
 		
-		static void ReadEXRFile          (MEXF_SIG)
-		{
-			DXTImageArray dxtimage_array;
-			dxtimage_array.ReadEXRFile(nrhs, prhs);
-			dxtimage_array.ToExport(nlhs, plhs);
-		}
-		
-		static void ReadMetadata         (MEXF_SIG);
+		static void ReadDDSMetadata      (MEXF_SIG);
+		static void ReadHDRMetadata      (MEXF_SIG);
+		static void ReadTGAMetadata      (MEXF_SIG);
 		
 		static void ParseFlags(const mxArray* mx_flags, BiMap &map, DWORD &flags);
 		static DXGI_FORMAT ParseFormat(const mxArray* mx_fmt);
 		
-		DXTImage& GetDXTImage(size_t idx) {return _arr[idx];}
+		DXTImage& GetDXTImage(size_t idx)
+		{
+			return _arr[idx];
+		}
 		size_t GetSize() {return _size;}
 		size_t GetM() {return _sz_m;}
 		size_t GetN() {return _sz_n;}
@@ -173,8 +161,15 @@ namespace DXTMEX
 		enum operation
 		{
 			NO_OP,
-			READ_DDS_FILE,
+			READ_DDS,
+			READ_HDR,
+			READ_TGA,
+			WRITE_DDS,
+			WRITE_HDR,
+			WRITE_TGA,
 			READ_DDS_META,
+			READ_HDR_META,
+			READ_TGA_META,
 			FLIP_ROTATE,
 			RESIZE,
 			CONVERT,
@@ -188,7 +183,6 @@ namespace DXTMEX
 			COMPUTE_NORMAL_MAP,
 			COPY_RECTANGLE,
 			COMPUTE_MSE,
-			SAVE_FILE,
 			TO_IMAGE,
 			TO_MATRIX
 		};
@@ -196,13 +190,37 @@ namespace DXTMEX
 		static DXTImageArray::operation GetOperation(const mxArray* directive);
 	
 	private:
-		DXTImage*          _arr;
+		DXTImage*     _arr;
 		size_t        _sz_m;
 		size_t        _sz_n;
 		size_t        _size;
 		
+		void Initialize(size_t m, size_t n)
+		{
+			this->_sz_m = m;
+			this->_sz_n = n;
+			this->_size = m*n;
+			this->_arr  = AllocateDXTImageArray(this->_size);
+		}
+		
+		void Initialize(size_t m, size_t n, DWORD flags)
+		{
+			this->_sz_m = m;
+			this->_sz_n = n;
+			this->_size = m*n;
+			this->_arr  = AllocateDXTImageArray(this->_size, flags);
+		}
+		
+		size_t GetNumberOfSlices()
+		{
+			size_t i, total = 0;
+			for(i = 0; i < this->_size; i++)
+			{
+				total += this->_arr[i].GetImageCount();
+			}
+		}
+		
 		/* import helpers */
-		static wchar_t* ParseFilename(const mxArray* mx_filename);
 		static void     ParseFilename(const mxArray* mx_filename, std::wstring& filename);
 		static DXTImage*     AllocateDXTImageArray(size_t num);
 		static DXTImage*     AllocateDXTImageArray(size_t num, DXTImage* in);
