@@ -40,7 +40,6 @@ static std::map<std::string, DXTImageArray::operation> g_directive_map
 };
 
 
-
 DXTImage::DXTImage(const mxArray* mx_width, const mxArray* mx_height, const mxArray* mx_row_pitch, const mxArray* mx_slice_pitch, const mxArray* mx_pixels, const mxArray* mx_formatid, const mxArray* mx_flags)
 {
 	if((mx_width == nullptr) || (mx_height == nullptr) || (mx_row_pitch == nullptr) || (mx_slice_pitch == nullptr) || (mx_pixels == nullptr) || (mx_formatid == nullptr) || (mx_flags == nullptr))
@@ -1027,7 +1026,7 @@ void DXTImageArray::ParseFlags(const mxArray* mx_flags, BiMap &map, DWORD &flags
 			MEXUtils::ToUpper(curr_flag);
 			char* flagname = mxArrayToString(curr_flag);
 			auto found = map.find(flagname);
-			if(found != map.s_end())
+			if(found != map.end_2to1())
 			{
 				flags |= found->second;
 			}
@@ -1044,7 +1043,7 @@ void DXTImageArray::ParseFlags(const mxArray* mx_flags, BiMap &map, DWORD &flags
 		MEXUtils::ToUpper((mxArray*)mx_flags);
 		char* flagname = mxArrayToString(mx_flags);
 		auto found = map.find(flagname);
-		if(found != map.s_end())
+		if(found != map.end_2to1())
 		{
 			flags |= found->second;
 		}
@@ -1071,7 +1070,7 @@ DXGI_FORMAT DXTImageArray::ParseFormat(const mxArray* mx_fmt)
 	MEXUtils::ToUpper((mxArray*)mx_fmt);
 	char* fmtname = mxArrayToString(mx_fmt);
 	auto found = g_format_map.find(fmtname);
-	if(found != g_format_map.s_end())
+	if(found != g_format_map.end_2to1())
 	{
 		fmt = (DXGI_FORMAT)found->second;
 	}
