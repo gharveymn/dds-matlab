@@ -1,4 +1,4 @@
-#include "directxtex.h"
+#include "DirectXTex.h"
 
 namespace DXTMEX
 {

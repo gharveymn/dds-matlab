@@ -1,6 +1,6 @@
 #pragma once
 
-#include "directxtex.h"
+#include "DirectXTex.h"
 
 #define MAX_CHANNELS 4
 #define MAX_CHANNEL_NAME_LEN 16

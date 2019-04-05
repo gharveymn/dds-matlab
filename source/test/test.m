@@ -1,0 +1,1 @@
+imread('cube2.tif');

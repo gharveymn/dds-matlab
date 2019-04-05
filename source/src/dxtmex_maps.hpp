@@ -1,80 +1,80 @@
 #pragma once
 
-#include "directxtex.h"
+#include "DirectXTex.h"
 #include <unordered_map>
+#include "dxtmex_dxtimagearray.hpp"
+#include "dxtmex_mexerror.hpp"
 
 namespace DXTMEX
 {
+	/* treat BiMap as const --- allocate statically */
+	template <typename T, typename S>
 	class BiMap
 	{
-	private:
-		std::unordered_map<size_t, std::string> i2s;
-		std::unordered_map<std::string, size_t> s2i;
+		
+		std::unordered_map<T,S> _1to2_map;
+		std::unordered_map<S,T> _2to1_map;
+		
 	public:
 		
-		BiMap() = default;
-		
-		BiMap(const std::initializer_list<std::pair<size_t, std::string>> &lst)
+		BiMap(const std::initializer_list<std::pair<T,S>> &lst)
 		{
-			for(auto &item : lst)
+			for(auto& item : lst)
 			{
-				i2s[item.first] = item.second;
-				s2i[item.second] = item.first;
+				_1to2_map[item.first] = item.second;
+				_2to1_map[item.second] = item.first;
 			}
 		}
 		
-		
-		void insert(size_t item1, std::string& item2)
+		auto Find(const T& key) -> decltype(_1to2_map.find(key))
 		{
-			i2s[item1] = item2;
-			s2i[item2] = item1;
+			return _1to2_map.find(key);
 		}
 		
-		
-		auto find(const size_t& key)
+		auto Find(const S& key) -> decltype(_2to1_map.find(key))
 		{
-			return i2s.find(key);
+			return _2to1_map.find(key);
 		}
 		
-		
-		auto i_end()
+		bool IsValid(decltype(_1to2_map.end()) iter)
 		{
-			return i2s.end();
+			return (iter != _1to2_map.end());
+		}
+		
+		bool IsValid(decltype(_2to1_map.end()) iter)
+		{
+			return (iter != _2to1_map.end());
+		}
+		
+		/*
+		decltype(_1to2_map.end()) end_1to2()
+		{
+			return _1to2_map.end();
 		}
 		
 		
 		std::string &operator[](const size_t &key)
 		{
-			return i2s[key];
+			return _1to2_map[key];
 		}
 		
-		
-		auto find(const std::string &key)
+		decltype(_2to1_map.end()) end_2to1()
 		{
-			return s2i.find(key);
-		}
-		
-		
-		auto s_end()
-		{
-			return s2i.end();
+			return _2to1_map.end();
 		}
 		
 		
 		size_t &operator[](const std::string &key)
 		{
-			return s2i[key];
+			return _2to1_map[key];
 		}
+		 */
 		
 	};
 	
-	extern BiMap g_format_map;
-	extern BiMap g_ctrlflag_map;
-	extern BiMap g_filterflag_map;
-	extern BiMap g_frflag_map;
-	extern BiMap g_pmflag_map;
-	extern BiMap g_compressflag_map;
-	extern BiMap g_cnflag_map;
-	extern BiMap g_cmseflag_map;
+	extern BiMap<DXGI_FORMAT, std::string> g_format_map;
+	extern BiMap<DirectX::TEX_ALPHA_MODE, std::string> g_alphamode_map;
+	extern BiMap<DXTImage::IMAGE_TYPE, std::string> g_imagetype_map;
+	
 }
 

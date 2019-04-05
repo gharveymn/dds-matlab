@@ -28,7 +28,7 @@ classdef DXTImage
 			end
 		end
 		
-		function h = imshow(obj, option)
+		function varargout = imshow(obj, option)
 			if(obj.Metadata.IsCubeMap)
 				if(nargin == 2)
 					switch(option)
@@ -49,11 +49,12 @@ classdef DXTImage
 			else
 				h = imshow(obj.Images(1));
 			end
+			if(nargout > 0)
+				varargout{1} = h;
+			end
 		end
 		
 		function obj = getMipLevel(obj, lvl)
-			obj = DXTImage;
-			obj.Metadata = obj.Metadata;
 			obj.Metadata.MipLevels = 1;
 			obj.Images = obj.Images(:, lvl);
 		end
@@ -70,12 +71,34 @@ classdef DXTImage
 			dxtmex('WRITE_TGA', struct(obj), varargin{:});
 		end
 		
-		function obj = flip(obj, varargin)
-			obj = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), varargin{:}));
+		function obj = flipvert(obj)
+			obj = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), 'FLIP_VERTICAL'));
 		end
 		
-		function obj = rotate(obj, varargin)
-			obj = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), varargin{:}));
+		function obj = fliphorz(obj)
+			obj = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), 'FLIP_HORIZONTAL'));
+		end
+		
+		function obj = rotate(obj, angle)
+			if(ischar(angle))
+				angle = str2double(angle);				
+			elseif(~isnumeric(angle))
+				error('DXTImageSlice:rotate:InvalidAngleError', 'Input angle must be either numeric or class ''char''');
+			end
+			angle = mod(angle, 360);
+			switch(angle)
+				case 0
+					input_flag = 'ROTATE0';
+				case 90
+					input_flag = 'ROTATE90';
+				case 180
+					input_flag = 'ROTATE180';
+				case 270
+					input_flag = 'ROTATE270';
+				otherwise
+					error('DXTImageSlice:rotate:InvalidAngleError', 'Input angle must be a multiple of 90');
+			end
+			obj = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), input_flag));
 		end
 		
 		function obj = resize(obj, varargin)

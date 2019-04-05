@@ -1,11 +1,12 @@
 #include "mex.h"
 #include "dxtmex_mexerror.hpp"
-#include "directxtex.h"
-#include "directxtex.inl"
+#include "DirectXTex.h"
+#include "DirectXTex.inl"
 #include "dxtmex_maps.hpp"
 #include "dxtmex_utils.hpp"
 #include "dxtmex_mexutils.hpp"
-#include "dxtmex_dxtimage.hpp"
+#include "dxtmex_dxtimagearray.hpp"
+#include "dxtmex_flags.hpp"
 
 using namespace DXTMEX;
 
@@ -14,7 +15,6 @@ const char* MEXError::g_library_name = "dxtmex";
 /* The gateway function. */
 void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 {
-	
 	DXTImageArray dxtimage_array;
 	
 	if(nrhs < 1)
@@ -37,32 +37,47 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		case DXTImageArray::READ_DDS:
 		{
 			DXTImageArray::ReadDDS(nlhs, plhs, num_in, in);
-			return;
+			return; // EARLY RETURN
 		}
 		case DXTImageArray::READ_HDR:
 		{
-			DXTImageArray::ReadDDS(nlhs, plhs, num_in, in);
-			return;
+			DXTImageArray::ReadHDR(nlhs, plhs, num_in, in);
+			return; // EARLY RETURN
 		}
 		case DXTImageArray::READ_TGA:
 		{
-			DXTImageArray::ReadDDS(nlhs, plhs, num_in, in);
-			return;
+			DXTImageArray::ReadTGA(nlhs, plhs, num_in, in);
+			return; // EARLY RETURN
 		}
 		case DXTImageArray::READ_DDS_META:
 		{
 			DXTImageArray::ReadDDSMetadata(nlhs, plhs, num_in, in);
-			return;
+			return; // EARLY RETURN
 		}
 		case DXTImageArray::READ_HDR_META:
 		{
 			DXTImageArray::ReadHDRMetadata(nlhs, plhs, num_in, in);
-			return;
+			return; // EARLY RETURN
 		}
 		case DXTImageArray::READ_TGA_META:
 		{
 			DXTImageArray::ReadTGAMetadata(nlhs, plhs, num_in, in);
-			return;
+			return; // EARLY RETURN
+		}
+		case DXTImageArray::IS_DDS:
+		{
+			DXTImageArray::IsDDS(nlhs, plhs, num_in, in);
+			return; // EARLY RETURN
+		}
+		case DXTImageArray::IS_HDR:
+		{
+			DXTImageArray::IsHDR(nlhs, plhs, num_in, in);
+			return; // EARLY RETURN
+		}
+		case DXTImageArray::IS_TGA:
+		{
+			DXTImageArray::IsTGA(nlhs, plhs, num_in, in);
+			return; // EARLY RETURN
 		}
 		case DXTImageArray::WRITE_DDS:
 		case DXTImageArray::WRITE_HDR:
@@ -98,8 +113,8 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL, "NoImageSuppliedError", "No images were supplied. Cannot continue.");
 	}
 	
-	int num_options              = num_in-1;
-	const mxArray** options      = in+1;
+	int num_options         = num_in-1;
+	const mxArray** options = in+1;
 	
 	switch(op)
 	{

@@ -13,7 +13,7 @@ classdef DXTImageSlice
 	% These should be given by DXTImage handler
 	properties (Access = protected)
 		FormatID
-		Flags
+		FlagsValue
 	end
 	
 	methods
@@ -30,7 +30,7 @@ classdef DXTImageSlice
 						obj(i,j).SlicePitch = images(i,j).SlicePitch;
 						obj(i,j).Pixels = images(i,j).Pixels;
 						obj(i,j).FormatID = images(i,j).FormatID;
-						obj(i,j).Flags = images(i,j).Flags;
+						obj(i,j).FlagsValue = images(i,j).FlagsValue;
 					end
 				end
 			end
@@ -57,12 +57,34 @@ classdef DXTImageSlice
 			dxtmex('WRITE_TGA', struct(obj), varargin{:});
 		end
 		
-		function obj = flip(obj, varargin)
-			obj = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), varargin{:}));
+		function obj = flipvert(obj)
+			obj = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), 'FLIP_VERTICAL'));
 		end
 		
-		function obj = rotate(obj, varargin)
-			obj = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), varargin{:}));
+		function obj = fliphorz(obj)
+			obj = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), 'FLIP_HORIZONTAL'));
+		end
+		
+		function obj = rotate(obj, angle)
+			if(ischar(angle))
+				angle = str2double(angle);				
+			elseif(~isnumeric(angle))
+				error('DXTImageSlice:rotate:InvalidAngleError', 'Input angle must be either numeric or class ''char''');
+			end
+			angle = mod(angle, 360);
+			switch(angle)
+				case 0
+					input_flag = 'ROTATE0';
+				case 90
+					input_flag = 'ROTATE0';
+				case 180
+					input_flag = 'ROTATE0';
+				case 270
+					input_flag = 'ROTATE0';
+				otherwise
+					error('DXTImageSlice:rotate:InvalidAngleError', 'Input angle must be a multiple of 90');
+			end
+			obj = DXTImage(dxtmex('FLIP_ROTATE', struct(obj), input_flag));
 		end
 		
 		function obj = resize(obj, varargin)
@@ -117,7 +139,7 @@ classdef DXTImageSlice
 								 'RowPitch',   obj(i,j).RowPitch, ...
 								 'SlicePitch', obj(i,j).SlicePitch, ...
 								 'Pixels',     obj(i,j).Pixels,...
-								 'Flags',      obj(i,j).Flags);
+								 'FlagsValue', obj(i,j).FlagsValue);
 				end
 			end	
 		end
