@@ -3,7 +3,7 @@
 #include <unordered_map>
 
 #include "mex.h"
-#include "windows.h"
+#include "DirectXTex.h"
 #include "dxtmex_mexerror.hpp"
 
 namespace DXTMEX
@@ -11,14 +11,14 @@ namespace DXTMEX
 	template <typename T>
 	class DXTFlags
 	{
-		const int _size;
+		const size_t _size;
 		const T* _flags;
 		const char** _names;
 		std::unordered_map<T, std::string> _toname_map;
 		std::unordered_map<std::string, T> _toflag_map;
 		
 	public:
-		DXTFlags(int size, const T* flags, const char** names) :
+		DXTFlags(size_t size, const T* flags, const char** names) :
 		_size(size),
 		_flags(flags),
 		_names(names),
@@ -64,7 +64,7 @@ namespace DXTMEX
 		
 		std::unordered_map<std::string, T>& GetNameToFlagMap() {return _toflag_map;}
 		
-		T ImportFlags(int num_options, const mxArray* mx_options[]);
+		void ImportFlags(int num_options, const mxArray* mx_options[], T& flags);
 		mxArray* ExportFlags(T flags);
 		
 	};

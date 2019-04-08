@@ -1,13 +1,20 @@
 #include "mex.h"
 #include "dxtmex_maps.hpp"
 #include "dxtmex_flags.hpp"
-#include "dxtmex_dxtimagearray.hpp"
 #include "dxtmex_mexutils.hpp"
 
 using namespace DXTMEX;
 
 namespace DXTMEX
 {
+	
+	template class DXTFlags<DirectX::DDS_FLAGS>;
+	template class DXTFlags<DirectX::TEX_FILTER_FLAGS>;
+	template class DXTFlags<DirectX::TEX_FR_FLAGS>;
+	template class DXTFlags<DirectX::TEX_PMALPHA_FLAGS>;
+	template class DXTFlags<DirectX::TEX_COMPRESS_FLAGS>;
+	template class DXTFlags<DirectX::CNMAP_FLAGS>;
+	template class DXTFlags<DirectX::CMSE_FLAGS>;
 	
 	BiMap<DXGI_FORMAT, std::string> g_format_map{{DXGI_FORMAT_UNKNOWN,                    "UNKNOWN"},
 	                                             {DXGI_FORMAT_R32G32B32A32_TYPELESS,      "R32G32B32A32_TYPELESS"},
@@ -142,15 +149,15 @@ namespace DXTMEX
 	                                                         {DXTImage::TGA,     "TGA"}};
 	
 	static const DirectX::DDS_FLAGS g_ddsflags_list[] = {DirectX::DDS_FLAGS_NONE,
-	                                        DirectX::DDS_FLAGS_LEGACY_DWORD,
-	                                        DirectX::DDS_FLAGS_NO_LEGACY_EXPANSION,
-	                                        DirectX::DDS_FLAGS_NO_R10B10G10A2_FIXUP,
-	                                        DirectX::DDS_FLAGS_FORCE_RGB,
-	                                        DirectX::DDS_FLAGS_NO_16BPP,
-	                                        DirectX::DDS_FLAGS_EXPAND_LUMINANCE,
-	                                        DirectX::DDS_FLAGS_BAD_DXTN_TAILS,
-	                                        DirectX::DDS_FLAGS_FORCE_DX10_EXT,
-	                                        DirectX::DDS_FLAGS_FORCE_DX10_EXT_MISC2};
+	                                                     DirectX::DDS_FLAGS_LEGACY_DWORD,
+	                                                     DirectX::DDS_FLAGS_NO_LEGACY_EXPANSION,
+	                                                     DirectX::DDS_FLAGS_NO_R10B10G10A2_FIXUP,
+	                                                     DirectX::DDS_FLAGS_FORCE_RGB,
+	                                                     DirectX::DDS_FLAGS_NO_16BPP,
+	                                                     DirectX::DDS_FLAGS_EXPAND_LUMINANCE,
+	                                                     DirectX::DDS_FLAGS_BAD_DXTN_TAILS,
+	                                                     DirectX::DDS_FLAGS_FORCE_DX10_EXT,
+	                                                     DirectX::DDS_FLAGS_FORCE_DX10_EXT_MISC2};
 	static const int g_num_ddsflags = ARRAYSIZE(g_ddsflags_list);
 	static const char* g_ddsflags_names[g_num_ddsflags] = {"None",
 	                                                       "LegacyDWord",
@@ -163,35 +170,37 @@ namespace DXTMEX
 	                                                       "ForceDX10Ext",
 	                                                       "ForceDX10ExtMisc2"};
 	
-	DXTFlags<DirectX::DDS_FLAGS> g_ddsflags(g_num_ddsflags, g_ddsflags_list, g_ddsflags_names);
+	DXTFlags<DirectX::DDS_FLAGS> g_ddsflags(g_num_ddsflags,
+	                                        g_ddsflags_list,
+	                                        g_ddsflags_names);
 	
 	static const DirectX::TEX_FILTER_FLAGS g_filterflags_list[] = {DirectX::TEX_FILTER_DEFAULT,
-	                                           DirectX::TEX_FILTER_POINT,
-	                                           DirectX::TEX_FILTER_LINEAR,
-	                                           DirectX::TEX_FILTER_CUBIC,
-	                                           DirectX::TEX_FILTER_FANT,
-	                                           DirectX::TEX_FILTER_BOX,
-	                                           DirectX::TEX_FILTER_TRIANGLE,
-	                                           DirectX::TEX_FILTER_DITHER,
-	                                           DirectX::TEX_FILTER_DITHER_DIFFUSION,
-	                                           DirectX::TEX_FILTER_WRAP_U,
-	                                           DirectX::TEX_FILTER_WRAP_V,
-	                                           DirectX::TEX_FILTER_WRAP_W,
-	                                           DirectX::TEX_FILTER_WRAP,
-	                                           DirectX::TEX_FILTER_MIRROR_U,
-	                                           DirectX::TEX_FILTER_MIRROR_V,
-	                                           DirectX::TEX_FILTER_MIRROR_W,
-	                                           DirectX::TEX_FILTER_MIRROR,
-	                                           DirectX::TEX_FILTER_SRGB_IN,
-	                                           DirectX::TEX_FILTER_SRGB_OUT,
-	                                           DirectX::TEX_FILTER_SRGB,
-	                                           DirectX::TEX_FILTER_FORCE_NON_WIC,
-	                                           DirectX::TEX_FILTER_FORCE_WIC,
-	                                           DirectX::TEX_FILTER_SEPARATE_ALPHA,
-	                                           DirectX::TEX_FILTER_RGB_COPY_RED,
-	                                           DirectX::TEX_FILTER_RGB_COPY_GREEN,
-	                                           DirectX::TEX_FILTER_RGB_COPY_BLUE,
-	                                           DirectX::TEX_FILTER_FLOAT_X2BIAS};
+	                                                               DirectX::TEX_FILTER_POINT,
+	                                                               DirectX::TEX_FILTER_LINEAR,
+	                                                               DirectX::TEX_FILTER_CUBIC,
+	                                                               DirectX::TEX_FILTER_FANT,
+	                                                               DirectX::TEX_FILTER_BOX,
+	                                                               DirectX::TEX_FILTER_TRIANGLE,
+	                                                               DirectX::TEX_FILTER_DITHER,
+	                                                               DirectX::TEX_FILTER_DITHER_DIFFUSION,
+	                                                               DirectX::TEX_FILTER_WRAP_U,
+	                                                               DirectX::TEX_FILTER_WRAP_V,
+	                                                               DirectX::TEX_FILTER_WRAP_W,
+	                                                               DirectX::TEX_FILTER_WRAP,
+	                                                               DirectX::TEX_FILTER_MIRROR_U,
+	                                                               DirectX::TEX_FILTER_MIRROR_V,
+	                                                               DirectX::TEX_FILTER_MIRROR_W,
+	                                                               DirectX::TEX_FILTER_MIRROR,
+	                                                               DirectX::TEX_FILTER_SRGB_IN,
+	                                                               DirectX::TEX_FILTER_SRGB_OUT,
+	                                                               DirectX::TEX_FILTER_SRGB,
+	                                                               DirectX::TEX_FILTER_FORCE_NON_WIC,
+	                                                               DirectX::TEX_FILTER_FORCE_WIC,
+	                                                               DirectX::TEX_FILTER_SEPARATE_ALPHA,
+	                                                               DirectX::TEX_FILTER_RGB_COPY_RED,
+	                                                               DirectX::TEX_FILTER_RGB_COPY_GREEN,
+	                                                               DirectX::TEX_FILTER_RGB_COPY_BLUE,
+	                                                               DirectX::TEX_FILTER_FLOAT_X2BIAS};
 	static const int g_num_filterflags = ARRAYSIZE(g_filterflags_list);
 	static const char* g_filterflags_names[g_num_filterflags] = {"Default",
 	                                                             "Point",
@@ -222,16 +231,16 @@ namespace DXTMEX
 	                                                             "FloatX2Bias"};
 	
 	DXTFlags<DirectX::TEX_FILTER_FLAGS> g_filterflags(g_num_filterflags,
-	                       g_filterflags_list,
-	                       g_filterflags_names);
+	                                                  g_filterflags_list,
+	                                                  g_filterflags_names);
 	
 	
 	static const DirectX::TEX_FR_FLAGS g_frflags_list[]{DirectX::TEX_FR_ROTATE0,
-	                                    DirectX::TEX_FR_ROTATE90,
-	                                    DirectX::TEX_FR_ROTATE180,
-	                                    DirectX::TEX_FR_ROTATE270,
-	                                    DirectX::TEX_FR_FLIP_HORIZONTAL,
-	                                    DirectX::TEX_FR_FLIP_VERTICAL};
+	                                                    DirectX::TEX_FR_ROTATE90,
+	                                                    DirectX::TEX_FR_ROTATE180,
+	                                                    DirectX::TEX_FR_ROTATE270,
+	                                                    DirectX::TEX_FR_FLIP_HORIZONTAL,
+	                                                    DirectX::TEX_FR_FLIP_VERTICAL};
 	static const int g_num_frflags = ARRAYSIZE(g_frflags_list);
 	static const char* g_frflags_names[g_num_frflags]{"ROTATE0",
 	                                                  "ROTATE90",
@@ -240,14 +249,16 @@ namespace DXTMEX
 	                                                  "FLIP_HORIZONTAL",
 	                                                  "FLIP_VERTICAL"};
 	
-	DXTFlags<DirectX::TEX_FR_FLAGS> g_frflags(g_num_frflags, g_frflags_list, g_frflags_names);
+	DXTFlags<DirectX::TEX_FR_FLAGS> g_frflags(g_num_frflags,
+	                                          g_frflags_list,
+	                                          g_frflags_names);
 	
 	static const DirectX::TEX_PMALPHA_FLAGS g_pmflags_list[]{DirectX::TEX_PMALPHA_DEFAULT,
-	                                    DirectX::TEX_PMALPHA_IGNORE_SRGB,
-	                                    DirectX::TEX_PMALPHA_REVERSE,
-	                                    DirectX::TEX_PMALPHA_SRGB_IN,
-	                                    DirectX::TEX_PMALPHA_SRGB_OUT,
-	                                    DirectX::TEX_PMALPHA_SRGB};
+	                                                         DirectX::TEX_PMALPHA_IGNORE_SRGB,
+	                                                         DirectX::TEX_PMALPHA_REVERSE,
+	                                                         DirectX::TEX_PMALPHA_SRGB_IN,
+	                                                         DirectX::TEX_PMALPHA_SRGB_OUT,
+	                                                         DirectX::TEX_PMALPHA_SRGB};
 	static const int g_num_pmflags = ARRAYSIZE(g_pmflags_list);
 	static const char* g_pmflags_names[g_num_pmflags]{"DEFAULT",
 	                                                  "IGNORE_SRGB",
@@ -256,19 +267,21 @@ namespace DXTMEX
 	                                                  "SRGB_OUT",
 	                                                  "SRGB"};
 	
-	DXTFlags<DirectX::TEX_PMALPHA_FLAGS> g_pmflags(g_num_pmflags, g_pmflags_list, g_pmflags_names);
+	DXTFlags<DirectX::TEX_PMALPHA_FLAGS> g_pmflags(g_num_pmflags,
+	                                               g_pmflags_list,
+	                                               g_pmflags_names);
 	
 	static const DirectX::TEX_COMPRESS_FLAGS g_compressflags_list[]{DirectX::TEX_COMPRESS_DEFAULT,
-	                                          DirectX::TEX_COMPRESS_RGB_DITHER,
-	                                          DirectX::TEX_COMPRESS_A_DITHER,
-	                                          DirectX::TEX_COMPRESS_DITHER,
-	                                          DirectX::TEX_COMPRESS_UNIFORM,
-	                                          DirectX::TEX_COMPRESS_BC7_USE_3SUBSETS,
-	                                          DirectX::TEX_COMPRESS_BC7_QUICK,
-	                                          DirectX::TEX_COMPRESS_SRGB_IN,
-	                                          DirectX::TEX_COMPRESS_SRGB_OUT,
-	                                          DirectX::TEX_COMPRESS_SRGB,
-	                                          DirectX::TEX_COMPRESS_PARALLEL};
+	                                                                DirectX::TEX_COMPRESS_RGB_DITHER,
+	                                                                DirectX::TEX_COMPRESS_A_DITHER,
+	                                                                DirectX::TEX_COMPRESS_DITHER,
+	                                                                DirectX::TEX_COMPRESS_UNIFORM,
+	                                                                DirectX::TEX_COMPRESS_BC7_USE_3SUBSETS,
+	                                                                DirectX::TEX_COMPRESS_BC7_QUICK,
+	                                                                DirectX::TEX_COMPRESS_SRGB_IN,
+	                                                                DirectX::TEX_COMPRESS_SRGB_OUT,
+	                                                                DirectX::TEX_COMPRESS_SRGB,
+	                                                                DirectX::TEX_COMPRESS_PARALLEL};
 	static const int g_num_compressflags = ARRAYSIZE(g_compressflags_list);
 	static const char* g_compressflags_names[g_num_compressflags]{"DEFAULT",
 	                                                              "RGB_DITHER",
@@ -283,20 +296,20 @@ namespace DXTMEX
 	                                                              "PARALLEL"};
 	
 	DXTFlags<DirectX::TEX_COMPRESS_FLAGS> g_compressflags(g_num_compressflags,
-	                         g_compressflags_list,
-	                         g_compressflags_names);
+	                                                      g_compressflags_list,
+	                                                      g_compressflags_names);
 	
 	static const DirectX::CNMAP_FLAGS g_cnflags_list[]{DirectX::CNMAP_DEFAULT,
-	                                    DirectX::CNMAP_CHANNEL_RED,
-	                                    DirectX::CNMAP_CHANNEL_GREEN,
-	                                    DirectX::CNMAP_CHANNEL_BLUE,
-	                                    DirectX::CNMAP_CHANNEL_ALPHA,
-	                                    DirectX::CNMAP_CHANNEL_LUMINANCE,
-	                                    DirectX::CNMAP_MIRROR_U,
-	                                    DirectX::CNMAP_MIRROR_V,
-	                                    DirectX::CNMAP_MIRROR,
-	                                    DirectX::CNMAP_INVERT_SIGN,
-	                                    DirectX::CNMAP_COMPUTE_OCCLUSION};
+	                                                   DirectX::CNMAP_CHANNEL_RED,
+	                                                   DirectX::CNMAP_CHANNEL_GREEN,
+	                                                   DirectX::CNMAP_CHANNEL_BLUE,
+	                                                   DirectX::CNMAP_CHANNEL_ALPHA,
+	                                                   DirectX::CNMAP_CHANNEL_LUMINANCE,
+	                                                   DirectX::CNMAP_MIRROR_U,
+	                                                   DirectX::CNMAP_MIRROR_V,
+	                                                   DirectX::CNMAP_MIRROR,
+	                                                   DirectX::CNMAP_INVERT_SIGN,
+	                                                   DirectX::CNMAP_COMPUTE_OCCLUSION};
 	static const int g_num_cnflags = ARRAYSIZE(g_cnflags_list);
 	static const char* g_cnflags_names[g_num_cnflags]{"DEFAULT",
 	                                                  "CHANNEL_RED",
@@ -310,18 +323,20 @@ namespace DXTMEX
 	                                                  "INVERT_SIGN",
 	                                                  "COMPUTE_OCCLUSION"};
 	
-	DXTFlags<DirectX::CNMAP_FLAGS> g_cnflags(g_num_cnflags, g_cnflags_list, g_cnflags_names);
+	DXTFlags<DirectX::CNMAP_FLAGS> g_cnflags(g_num_cnflags,
+	                                         g_cnflags_list,
+	                                         g_cnflags_names);
 	
 	
 	static const DirectX::CMSE_FLAGS g_cmseflags_list[]{DirectX::CMSE_DEFAULT,
-	                                      DirectX::CMSE_IMAGE1_SRGB,
-	                                      DirectX::CMSE_IMAGE2_SRGB,
-	                                      DirectX::CMSE_IMAGE1_X2_BIAS,
-	                                      DirectX::CMSE_IMAGE2_X2_BIAS,
-	                                      DirectX::CMSE_IGNORE_RED,
-	                                      DirectX::CMSE_IGNORE_GREEN,
-	                                      DirectX::CMSE_IGNORE_BLUE,
-	                                      DirectX::CMSE_IGNORE_ALPHA};
+	                                                    DirectX::CMSE_IMAGE1_SRGB,
+	                                                    DirectX::CMSE_IMAGE2_SRGB,
+	                                                    DirectX::CMSE_IMAGE1_X2_BIAS,
+	                                                    DirectX::CMSE_IMAGE2_X2_BIAS,
+	                                                    DirectX::CMSE_IGNORE_RED,
+	                                                    DirectX::CMSE_IGNORE_GREEN,
+	                                                    DirectX::CMSE_IGNORE_BLUE,
+	                                                    DirectX::CMSE_IGNORE_ALPHA};
 	static const int g_num_cmseflags = ARRAYSIZE(g_cmseflags_list);
 	static const char* g_cmseflags_names[g_num_cmseflags]{"DEFAULT",
 	                                                      "IMAGE1_SRGB",
@@ -333,17 +348,19 @@ namespace DXTMEX
 	                                                      "IGNORE_BLUE",
 	                                                      "IGNORE_ALPHA"};
 	
-	DXTFlags<DirectX::CMSE_FLAGS> g_cmseflags(g_num_cmseflags, g_cmseflags_list, g_cmseflags_names);
+	DXTFlags<DirectX::CMSE_FLAGS> g_cmseflags(g_num_cmseflags,
+	                                          g_cmseflags_list,
+	                                          g_cmseflags_names);
 	
-	template <typename T>
-	T DXTFlags<T>::ImportFlags(int num_options, const mxArray* mx_options[])
+	
+	template<typename T>
+	void DXTFlags<T>::ImportFlags(int num_options, const mxArray* mx_options[], T& flags)
 	{
 		int i;
-		DWORD flags = 0;
 		const mxArray* curr_key;
 		const mxArray* curr_val;
 		
-		if((num_options%2) != 0)
+		if((num_options % 2) != 0)
 		{
 			MEXError::PrintMexError(MEU_FL,
 			                        MEU_SEVERITY_USER,
@@ -374,19 +391,18 @@ namespace DXTMEX
 			T found_flag = this->FindFlag(flagname);
 			if(mxIsLogicalScalarTrue(curr_val))
 			{
-				flags |= found_flag;
+				flags = (T)(flags | found_flag);
 			}
 			else
 			{
-				flags &= ~found_flag;
+				flags = (T)(flags & ~found_flag);
 			}
-			
 			mxFree(flagname);
 		}
-		return flags;
 	}
 	
-	template <typename T>
+	
+	template<typename T>
 	mxArray* DXTFlags<T>::ExportFlags(T flags)
 	{
 		mxArray* flag_struct = mxCreateStructMatrix(1,

@@ -1,8 +1,8 @@
 #include <string>
 
 #include "mex.h"
-#include "dxtmex_maps.hpp"
 #include "dxtmex_flags.hpp"
+#include "dxtmex_maps.hpp"
 #include "dxtmex_dxtimagearray.hpp"
 #include "dxtmex_mexerror.hpp"
 #include "dxtmex_mexutils.hpp"
@@ -111,7 +111,7 @@ DXTImage* DXTImageArray::AllocateDXTImageArray(size_t num, DXTImage::IMAGE_TYPE 
 void DXTImageArray::ReadDDS(MEXF_IN)
 {
 	size_t i;
-	DWORD flags = DirectX::DDS_FLAGS_NONE;
+	DirectX::DDS_FLAGS flags = DirectX::DDS_FLAGS_NONE;
 	std::wstring filename;
 	
 	if(nrhs < 1)
@@ -123,7 +123,7 @@ void DXTImageArray::ReadDDS(MEXF_IN)
 	
 	if(nrhs > 1)
 	{
-		flags |= g_ddsflags.ImportFlags(nrhs - 1, prhs + 1);
+		g_ddsflags.ImportFlags(nrhs - 1, prhs + 1, flags);
 	}
 	
 	if(mxIsCell(mx_filenames))
@@ -313,7 +313,7 @@ void DXTImageArray::ReadDDSMetadata(MEXF_SIG)
 {
 	std::wstring filename;
 	DirectX::TexMetadata metadata = {};
-	DWORD flags = DirectX::DDS_FLAGS_NONE;
+	DirectX::DDS_FLAGS flags = DirectX::DDS_FLAGS_NONE;
 	
 	if(nrhs < 1)
 	{
@@ -324,7 +324,7 @@ void DXTImageArray::ReadDDSMetadata(MEXF_SIG)
 	
 	if(nrhs > 1)
 	{
-		flags |= g_ddsflags.ImportFlags(nrhs - 1, prhs + 1);
+		g_ddsflags.ImportFlags(nrhs - 1, prhs + 1, flags);
 	}
 	
 	hres = DirectX::GetMetadataFromDDSFile(filename.c_str(), flags, metadata);
@@ -516,7 +516,7 @@ void DXTImageArray::Resize(MEXF_IN)
 	size_t i;
 	DXTImage* new_arr = this->CopyDXTImageArray();
 	size_t w, h;
-	DWORD filter_flags = DirectX::TEX_FILTER_DEFAULT;
+	DirectX::TEX_FILTER_FLAGS filter_flags = DirectX::TEX_FILTER_DEFAULT;
 	if(nrhs < 1)
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughArgumentsError", "No enough arguments. Please supply a size.");
@@ -544,7 +544,7 @@ void DXTImageArray::Resize(MEXF_IN)
 		w = (size_t)mxGetScalar(prhs[1]);
 		if(nrhs > 2)
 		{
-			filter_flags |= g_filterflags.ImportFlags(nrhs - 2, prhs + 2);
+			g_filterflags.ImportFlags(nrhs - 2, prhs + 2, filter_flags);
 		}
 	}
 	else
@@ -563,7 +563,7 @@ void DXTImageArray::Resize(MEXF_IN)
 		w = (size_t)*(data + 1);
 		if(nrhs > 1)
 		{
-			filter_flags |= g_filterflags.ImportFlags(nrhs - 1, prhs + 1);
+			g_filterflags.ImportFlags(nrhs - 1, prhs + 1, filter_flags);
 		}
 	}
 	
@@ -586,7 +586,7 @@ void DXTImageArray::Convert(MEXF_IN)
 	DXGI_FORMAT fmt;
 	DXTImage* new_arr = this->CopyDXTImageArray();
 	float threshold = DirectX::TEX_THRESHOLD_DEFAULT;
-	DWORD filter_flags = DirectX::TEX_FILTER_DEFAULT;
+	DirectX::TEX_FILTER_FLAGS filter_flags = DirectX::TEX_FILTER_DEFAULT;
 	if(nrhs < 1)
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughArgumentsError", "Not enough arguments. Please supply a format");
@@ -605,12 +605,12 @@ void DXTImageArray::Convert(MEXF_IN)
 			threshold = (float)mxGetScalar(prhs[1]);
 			if(nrhs > 2)
 			{
-				filter_flags |= g_filterflags.ImportFlags(nrhs - 2, prhs + 2);
+				g_filterflags.ImportFlags(nrhs - 2, prhs + 2, filter_flags);
 			}
 		}
 		else if(mxIsChar(prhs[1]))
 		{
-			filter_flags |= g_filterflags.ImportFlags(nrhs - 1, prhs + 1);
+			g_filterflags.ImportFlags(nrhs - 1, prhs + 1, filter_flags);
 		}
 		else
 		{
@@ -658,7 +658,7 @@ void DXTImageArray::GenerateMipMaps(MEXF_IN)
 	size_t i;
 	DXTImage* new_arr = this->CopyDXTImageArray();
 	size_t levels = 0;
-	DWORD filter_flags = DirectX::TEX_FILTER_DEFAULT;
+	DirectX::TEX_FILTER_FLAGS filter_flags = DirectX::TEX_FILTER_DEFAULT;
 	
 	if(nrhs > 0)
 	{
@@ -671,12 +671,12 @@ void DXTImageArray::GenerateMipMaps(MEXF_IN)
 			levels = (size_t)mxGetScalar(prhs[0]);
 			if(nrhs > 1)
 			{
-				filter_flags |= g_filterflags.ImportFlags(nrhs - 1, prhs + 1);
+				g_filterflags.ImportFlags(nrhs - 1, prhs + 1, filter_flags);
 			}
 		}
 		else if(mxIsChar(prhs[0]))
 		{
-			filter_flags |= g_filterflags.ImportFlags(nrhs, prhs);
+			g_filterflags.ImportFlags(nrhs, prhs, filter_flags);
 		}
 		else
 		{
@@ -764,7 +764,8 @@ void DXTImageArray::PremultiplyAlpha(MEXF_IN)
 {
 	size_t i;
 	DXTImage* new_arr = this->CopyDXTImageArray();
-	DWORD pmalpha_flags = DirectX::TEX_PMALPHA_DEFAULT | g_pmflags.ImportFlags(nrhs, prhs);
+	DirectX::TEX_PMALPHA_FLAGS pmalpha_flags = DirectX::TEX_PMALPHA_DEFAULT;
+	g_pmflags.ImportFlags(nrhs, prhs, pmalpha_flags);
 	
 	for(i = 0; i < this->GetSize(); i++)
 	{
@@ -784,7 +785,7 @@ void DXTImageArray::Compress(MEXF_IN)
 	size_t i;
 	DXGI_FORMAT fmt;
 	DXTImage* new_arr = this->CopyDXTImageArray();
-	DWORD compress_flags = DirectX::TEX_COMPRESS_DEFAULT;
+	DirectX::TEX_COMPRESS_FLAGS compress_flags = DirectX::TEX_COMPRESS_DEFAULT;
 	float threshold = DirectX::TEX_THRESHOLD_DEFAULT;
 	if(nrhs < 1)
 	{
@@ -807,12 +808,12 @@ void DXTImageArray::Compress(MEXF_IN)
 			threshold = (float)mxGetScalar(prhs[1]);
 			if(nrhs > 2)
 			{
-				compress_flags |= g_compressflags.ImportFlags(nrhs - 2, prhs + 2);
+				g_compressflags.ImportFlags(nrhs - 2, prhs + 2, compress_flags);
 			}
 		}
 		else if(mxIsChar(prhs[1]))
 		{
-			compress_flags |= g_compressflags.ImportFlags(nrhs - 1, prhs + 1);
+			g_compressflags.ImportFlags(nrhs - 1, prhs + 1, compress_flags);
 		}
 		else
 		{
@@ -867,7 +868,7 @@ void DXTImageArray::ComputeNormalMap(MEXF_IN)
 	DXTImage* new_arr = this->CopyDXTImageArray();
 	DXGI_FORMAT fmt;
 	float amplitude;
-	DWORD cn_flags  = DirectX::CNMAP_DEFAULT;
+	DirectX::CNMAP_FLAGS cn_flags = DirectX::CNMAP_DEFAULT;
 	if(nrhs < 2)
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughArgumentsError", "No enough arguments. Please supply a format and an amplitude.");
@@ -883,7 +884,7 @@ void DXTImageArray::ComputeNormalMap(MEXF_IN)
 	
 	if(nrhs > 2)
 	{
-		cn_flags |= g_cnflags.ImportFlags(nrhs - 2, prhs + 2);
+		g_cnflags.ImportFlags(nrhs - 2, prhs + 2, cn_flags);
 	}
 	
 	for(i = 0; i < this->GetSize(); i++)
@@ -928,7 +929,7 @@ void DXTImageArray::CopyRectangle(DXTImageArray& dst, DXTImageArray& src, MEXF_I
 	
 	if(nrhs > 2)
 	{
-		filter_flags |= g_filterflags.ImportFlags(nrhs - 2, prhs + 2);
+		g_filterflags.ImportFlags(nrhs - 2, prhs + 2, filter_flags);
 	}
 	
 	if(src.GetSize() == 1)
@@ -1006,7 +1007,8 @@ void DXTImageArray::CopyRectangle(DXTImageArray& dst, DXTImageArray& src, MEXF_I
 void DXTImageArray::ComputeMSE(DXTImageArray& dxtimagearray1, DXTImageArray& dxtimagearray2, MEXF_SIG)
 {
 	size_t i;
-	DirectX::CMSE_FLAGS cmse_flags = (DirectX::CMSE_FLAGS)(DirectX::CMSE_DEFAULT | g_cmseflags.ImportFlags(nrhs, prhs));
+	DirectX::CMSE_FLAGS cmse_flags = DirectX::CMSE_DEFAULT;
+	g_cmseflags.ImportFlags(nrhs, prhs, cmse_flags);
 	
 	if(dxtimagearray1.GetSize() != dxtimagearray2.GetSize())
 	{
@@ -1053,7 +1055,7 @@ void DXTImageArray::ComputeMSE(DXTImageArray& dxtimagearray1, DXTImageArray& dxt
 
 void DXTImageArray::ComputeMSE(DXTImage& dxtimage1, DXTImage& dxtimage2, DirectX::CMSE_FLAGS cmse_flags, mxArray*& mx_dxtimage_mse, mxArray*& mx_dxtimage_mseV)
 {
-	int i, j, k;
+	size_t i, j, k;
 	mxArray* tmp_mse,* tmp_mseV;
 	if(dxtimage1.GetImageCount() != dxtimage2.GetImageCount())
 	{
@@ -1090,7 +1092,7 @@ void DXTImageArray::ComputeMSE(DXTImage& dxtimage1, DXTImage& dxtimage2, DirectX
 
 void DXTImageArray::ComputeMSE(DXTImage& dxtimage1, DXTImage& dxtimage2, DirectX::CMSE_FLAGS cmse_flags, mxArray*& mx_dxtimage_mse)
 {
-	int i, j, k;
+	size_t i, j, k;
 	mxArray* tmp_mse;
 	if(dxtimage1.GetImageCount() != dxtimage2.GetImageCount())
 	{
@@ -1156,7 +1158,7 @@ void DXTImageArray::WriteDDS(MEXF_IN)
 {
 	size_t i;
 	std::wstring filename;
-	DWORD ctrl_flags = DirectX::DDS_FLAGS_NONE;
+	DirectX::DDS_FLAGS ctrl_flags = DirectX::DDS_FLAGS_NONE;
 	if(nrhs < 1)
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "NotEnoughArgumentsError", "No enough arguments. Please supply a filename.");
@@ -1164,7 +1166,7 @@ void DXTImageArray::WriteDDS(MEXF_IN)
 	
 	if(nrhs > 1)
 	{
-		ctrl_flags |= g_ddsflags.ImportFlags(nrhs - 1, prhs + 1);
+		g_ddsflags.ImportFlags(nrhs - 1, prhs + 1, ctrl_flags);
 	}
 	
 	if(mxIsChar(prhs[0]))

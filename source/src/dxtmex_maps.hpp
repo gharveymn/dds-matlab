@@ -36,12 +36,12 @@ namespace DXTMEX
 			return _2to1_map.find(key);
 		}
 		
-		bool IsValid(decltype(_1to2_map.end()) iter)
+		bool IsValid(typename std::unordered_map<T,S>::iterator iter)
 		{
 			return (iter != _1to2_map.end());
 		}
 		
-		bool IsValid(decltype(_2to1_map.end()) iter)
+		bool IsValid(typename std::unordered_map<S,T>::iterator iter)
 		{
 			return (iter != _2to1_map.end());
 		}

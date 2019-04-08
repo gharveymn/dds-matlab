@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mex.h"
 #include "DirectXTex.h"
 
 #define MAX_CHANNELS 4
@@ -17,9 +18,9 @@ namespace DXTMEX
 		DXGI_FORMAT format;
 		size_t num_channels;
 		size_t pixel_size;
-		size_t channel_offsets[MAX_CHANNELS];
-		size_t channel_sizes[MAX_CHANNELS];
-		char channel_names[MAX_CHANNELS][MAX_CHANNEL_NAME_LEN];
+		size_t* channel_offsets;
+		size_t* channel_sizes;
+		char** channel_names;
 		uint8_t* pixels;
 		
 		/* getChannel */
@@ -28,7 +29,7 @@ namespace DXTMEX
 		DXGIPixels(DXGI_FORMAT fmt) {}
 		
 		
-		void set(DXGI_FORMAT fmt, size_t nch, size_t px_sz, size_t ch_sz[MAX_CHANNELS], char ch_names[MAX_CHANNELS][MAX_CHANNEL_NAME_LEN])
+		void Set(DXGI_FORMAT fmt, size_t nch, size_t px_sz, size_t ch_sz[MAX_CHANNELS], char ch_names[MAX_CHANNELS][MAX_CHANNEL_NAME_LEN])
 		{
 			format = fmt;
 			num_channels = nch;
@@ -47,6 +48,9 @@ namespace DXTMEX
 				}
 			}
 		}
+		
+		mxArray* ExtractChannel(std::vector<size_t> ch_nums);
+		
 	};
 }
 

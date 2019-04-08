@@ -172,6 +172,9 @@ namespace DXTMEX
 				return 0;
 			}
 		}
+		
+		mxArray* ExtractChannel(std::vector<size_t> ch_nums);
+		
 	}
 }
 
