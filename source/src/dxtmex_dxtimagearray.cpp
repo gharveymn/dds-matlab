@@ -471,12 +471,7 @@ DXGI_FORMAT DXTImageArray::ParseFormat(const mxArray* mx_fmt)
 	}
 	MEXUtils::ToUpper((mxArray*)mx_fmt);
 	char* fmtname = mxArrayToString(mx_fmt);
-	auto found = g_format_map.Find(fmtname);
-	if(!g_format_map.IsValid(found))
-	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "UnexpectedFormatError", "Unexpected format '%s' was encountered.", fmtname);
-	}
-	auto fmt = (DXGI_FORMAT)found->second;
+	DXGI_FORMAT fmt = GetFormatIDFromString(fmtname);
 	mxFree(fmtname);
 	return fmt;
 }

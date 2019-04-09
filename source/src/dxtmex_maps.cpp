@@ -137,16 +137,76 @@ namespace DXTMEX
 	                                             {DXGI_FORMAT_V408,                       "V408"},
 	                                             {DXGI_FORMAT_FORCE_UINT,                 "FORCE_UINT"}};
 	
+	std::string GetFormatStringFromID(DXGI_FORMAT fmt)
+	{
+		auto found = g_format_map.Find(fmt);
+		if(!g_format_map.IsValid(found))
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "UnexpectedFormatError", "An unexpected format was encountered (ID: %u).", fmt);
+		}
+		return found->second;
+	}
+	
+	DXGI_FORMAT GetFormatIDFromString(const std::string& str)
+	{
+		auto found = g_format_map.Find(str);
+		if(!g_format_map.IsValid(found))
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "UnexpectedFormatError", "Unexpected format '%s' was encountered.", str.c_str());
+		}
+		return found->second;
+	}
+	
 	BiMap<DirectX::TEX_ALPHA_MODE, std::string> g_alphamode_map{{DirectX::TEX_ALPHA_MODE_UNKNOWN,       "Unknown"},
 	                                                            {DirectX::TEX_ALPHA_MODE_STRAIGHT,      "Straight"},
 	                                                            {DirectX::TEX_ALPHA_MODE_PREMULTIPLIED, "Premultiplied"},
 	                                                            {DirectX::TEX_ALPHA_MODE_OPAQUE,        "Opaque"},
 	                                                            {DirectX::TEX_ALPHA_MODE_CUSTOM,        "Custom"}};
 	
+	std::string GetAlphaModeStringFromID(DirectX::TEX_ALPHA_MODE alpha_mode)
+	{
+		auto found = g_alphamode_map.Find(alpha_mode);
+		if(!g_alphamode_map.IsValid(found))
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "UnexpectedAlphaModeError", "An unexpected alpha mode was encountered (ID: %u).", alpha_mode);
+		}
+		return found->second;
+	}
+	
+	DirectX::TEX_ALPHA_MODE GetAlphaModeIDFromString(const std::string& str)
+	{
+		auto found = g_alphamode_map.Find(str);
+		if(!g_alphamode_map.IsValid(found))
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "UnexpectedAlphaModeError", "Unexpected alpha mode '%s' was encountered.", str.c_str());
+		}
+		return found->second;
+	}
+	
 	BiMap<DXTImage::IMAGE_TYPE, std::string> g_imagetype_map{{DXTImage::UNKNOWN, "Unknown"},
 	                                                         {DXTImage::DDS,     "DDS"},
 	                                                         {DXTImage::HDR,     "HDR"},
 	                                                         {DXTImage::TGA,     "TGA"}};
+	
+	std::string GetImageTypeStringFromID(DXTImage::IMAGE_TYPE image_type)
+	{
+		auto found = g_imagetype_map.Find(image_type);
+		if(!g_imagetype_map.IsValid(found))
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "UnexpectedImageTypeError", "An unexpected image type was encountered (ID: %u).", image_type);
+		}
+		return found->second;
+	}
+	
+	DXTImage::IMAGE_TYPE GetImageTypeIDFromString(const std::string& str)
+	{
+		auto found = g_imagetype_map.Find(str);
+		if(!g_imagetype_map.IsValid(found))
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "UnexpectedImageTypeError", "Unexpected image type '%s' was encountered.", str.c_str());
+		}
+		return found->second;
+	}
 	
 	static const DirectX::DDS_FLAGS g_ddsflags_list[] = {DirectX::DDS_FLAGS_NONE,
 	                                                     DirectX::DDS_FLAGS_LEGACY_DWORD,

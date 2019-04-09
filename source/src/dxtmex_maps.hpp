@@ -46,31 +46,16 @@ namespace DXTMEX
 			return (iter != _2to1_map.end());
 		}
 		
-		/*
-		decltype(_1to2_map.end()) end_1to2()
-		{
-			return _1to2_map.end();
-		}
-		
-		
-		std::string &operator[](const size_t &key)
-		{
-			return _1to2_map[key];
-		}
-		
-		decltype(_2to1_map.end()) end_2to1()
-		{
-			return _2to1_map.end();
-		}
-		
-		
-		size_t &operator[](const std::string &key)
-		{
-			return _2to1_map[key];
-		}
-		 */
-		
 	};
+	
+	std::string GetFormatStringFromID(DXGI_FORMAT fmt);
+	DXGI_FORMAT GetFormatIDFromString(const std::string& str);
+	
+	std::string GetAlphaModeStringFromID(DirectX::TEX_ALPHA_MODE alpha_mode);
+	DirectX::TEX_ALPHA_MODE GetAlphaModeIDFromString(const std::string& str);
+	
+	std::string GetImageTypeStringFromID(DXTImage::IMAGE_TYPE image_type);
+	DXTImage::IMAGE_TYPE GetImageTypeIDFromString(const std::string& str);
 	
 	extern BiMap<DXGI_FORMAT, std::string> g_format_map;
 	extern BiMap<DirectX::TEX_ALPHA_MODE, std::string> g_alphamode_map;

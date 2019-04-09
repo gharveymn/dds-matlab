@@ -53,16 +53,7 @@ DXTImage::DXTImage(const mxArray* mx_metadata, const mxArray* mx_images)
 	ImportMetadata(mx_metadata, metadata);
 	this->SetFlags((DirectX::DDS_FLAGS)*(uint32_T*)mxGetData(mxGetField(mxGetField(mx_metadata, 0, "Flags"), 0, "Value")));
 	char* str_imtype = mxArrayToString(mxGetField(mx_metadata, 0, "Type"));
-	auto found = g_imagetype_map.Find(str_imtype);
-	if(!g_imagetype_map.IsValid(found))
-	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "UnknownImageTypeError", "The image type '%s' is not supported.", str_imtype);
-	}
-	this->SetImageType(found->second);
-	mexPrintf("%s\n", str_imtype);
-	mexPrintf("%u\n", found->second);
-	mexPrintf("%u\n", this->GetImageType());
-	mxFree(str_imtype);
+	this->SetImageType(GetImageTypeIDFromString(str_imtype));
 	this->Initialize(metadata, this->GetFlags());
 	ImportImages(mx_images, (DirectX::Image*)this->GetImages(), metadata.arraySize, metadata.mipLevels, metadata.depth, metadata.dimension);
 }
@@ -129,12 +120,7 @@ mxArray* DXTImage::ExportMetadata(const DirectX::TexMetadata& metadata, DXTImage
 {
 	const char* fieldnames[] = {"Type", "Width", "Height", "Depth", "ArraySize", "MipLevels", "MiscFlags", "MiscFlags2", "Format", "Dimension", "AlphaMode", "IsCubeMap", "IsPMAlpha", "IsVolumeMap", "Flags"};
 	mxArray* mx_metadata = mxCreateStructMatrix(1, 1, ARRAYSIZE(fieldnames), fieldnames);
-	auto found_type = g_imagetype_map.Find(type);
-	if(!g_imagetype_map.IsValid(found_type))
-	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "UnexpectedImageTypeError", "An unexpected image type was encountered (Value: %u).", type);
-	}
-	mxSetField(mx_metadata, 0, "Type", mxCreateString(found_type->second.c_str()));
+	mxSetField(mx_metadata, 0, "Type", mxCreateString(GetImageTypeStringFromID(type).c_str()));
 	MEXUtils::SetScalarField(mx_metadata, 0, "Width", mxUINT64_CLASS, metadata.width);
 	MEXUtils::SetScalarField(mx_metadata, 0, "Height", mxUINT64_CLASS, metadata.height);
 	MEXUtils::SetScalarField(mx_metadata, 0, "Depth", mxUINT64_CLASS, metadata.depth);
@@ -144,12 +130,7 @@ mxArray* DXTImage::ExportMetadata(const DirectX::TexMetadata& metadata, DXTImage
 	MEXUtils::SetScalarField(mx_metadata, 0, "MiscFlags2", mxUINT32_CLASS, metadata.miscFlags2);
 	mxSetField(mx_metadata, 0, "Format", ExportFormat(metadata.format));
 	MEXUtils::SetScalarField(mx_metadata, 0, "Dimension", mxUINT8_CLASS, metadata.dimension - 1);
-	auto found_alphamode = g_alphamode_map.Find(metadata.GetAlphaMode());
-	if(!g_alphamode_map.IsValid(found_alphamode))
-	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "UnexpectedAlphaModeError", "An unexpected alpha mode was encountered (Value: %u).", metadata.GetAlphaMode());
-	}
-	mxSetField(mx_metadata, 0, "AlphaMode", mxCreateString(found_alphamode->second.c_str()));
+	mxSetField(mx_metadata, 0, "AlphaMode", mxCreateString(GetAlphaModeStringFromID(metadata.GetAlphaMode()).c_str()));
 	mxSetField(mx_metadata, 0, "IsCubeMap", mxCreateLogicalScalar(metadata.IsCubemap()));
 	mxSetField(mx_metadata, 0, "IsPMAlpha", mxCreateLogicalScalar(metadata.IsPMAlpha()));
 	mxSetField(mx_metadata, 0, "IsVolumeMap", mxCreateLogicalScalar(metadata.IsVolumemap()));
@@ -162,12 +143,7 @@ mxArray* DXTImage::ExportMetadata()
 	const DirectX::TexMetadata& metadata = this->GetMetadata();
 	const char* fieldnames[] = {"Type", "Width", "Height", "Depth", "ArraySize", "MipLevels", "MiscFlags", "MiscFlags2", "Format", "Dimension", "AlphaMode", "IsCubeMap", "IsPMAlpha", "IsVolumeMap", "Flags"};
 	mxArray* mx_metadata = mxCreateStructMatrix(1, 1, ARRAYSIZE(fieldnames), fieldnames);
-	auto found_type = g_imagetype_map.Find(this->_type);
-	if(!g_imagetype_map.IsValid(found_type))
-	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "UnexpectedImageTypeError", "An unexpected image type was encountered (Value: %u).", this->_type);
-	}
-	mxSetField(mx_metadata, 0, "Type", mxCreateString(found_type->second.c_str()));
+	mxSetField(mx_metadata, 0, "Type", mxCreateString(GetImageTypeStringFromID(this->_type).c_str()));
 	MEXUtils::SetScalarField(mx_metadata, 0, "Width", mxUINT64_CLASS, metadata.width);
 	MEXUtils::SetScalarField(mx_metadata, 0, "Height", mxUINT64_CLASS, metadata.height);
 	MEXUtils::SetScalarField(mx_metadata, 0, "Depth", mxUINT64_CLASS, metadata.depth);
@@ -177,12 +153,7 @@ mxArray* DXTImage::ExportMetadata()
 	MEXUtils::SetScalarField(mx_metadata, 0, "MiscFlags2", mxUINT32_CLASS, metadata.miscFlags2);
 	mxSetField(mx_metadata, 0, "Format", ExportFormat(metadata.format));
 	MEXUtils::SetScalarField(mx_metadata, 0, "Dimension", mxUINT8_CLASS, metadata.dimension - 1);
-	auto found_alphamode = g_alphamode_map.Find(metadata.GetAlphaMode());
-	if(!g_alphamode_map.IsValid(found_alphamode))
-	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "UnexpectedAlphaModeError", "An unexpected alpha mode was encountered (Value: %u).", metadata.GetAlphaMode());
-	}
-	mxSetField(mx_metadata, 0, "AlphaMode", mxCreateString(found_alphamode->second.c_str()));
+	mxSetField(mx_metadata, 0, "AlphaMode", mxCreateString(GetAlphaModeStringFromID(metadata.GetAlphaMode()).c_str()));
 	mxSetField(mx_metadata, 0, "IsCubeMap", mxCreateLogicalScalar(metadata.IsCubemap()));
 	mxSetField(mx_metadata, 0, "IsPMAlpha", mxCreateLogicalScalar(metadata.IsPMAlpha()));
 	mxSetField(mx_metadata, 0, "IsVolumeMap", mxCreateLogicalScalar(metadata.IsVolumemap()));
@@ -209,12 +180,7 @@ mxArray* DXTImage::ExportFormat(DXGI_FORMAT fmt)
 	"BitsPerColor"
 	};
 	mxArray* mx_fmt = mxCreateStructMatrix(1, 1, ARRAYSIZE(fmt_fields), fmt_fields);
-	auto found = g_format_map.Find(fmt);
-	if(!g_format_map.IsValid(found))
-	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "UnexpectedFormatError", "An unexpected format was encountered (ID: %u).", fmt);
-	}
-	mxSetField(mx_fmt, 0, "Name", mxCreateString(found->second.c_str()));
+	mxSetField(mx_fmt, 0, "Name", mxCreateString(GetFormatStringFromID(fmt).c_str()));
 	MEXUtils::SetScalarField(mx_fmt, 0, "ID", mxUINT32_CLASS, fmt);
 	mxSetField(mx_fmt, 0, "IsValid",        mxCreateLogicalScalar(DirectX::IsValid(fmt)));
 	mxSetField(mx_fmt, 0, "IsCompressed",   mxCreateLogicalScalar(DirectX::IsCompressed(fmt)));
