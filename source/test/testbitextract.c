@@ -1,6 +1,18 @@
 #include <stdio.h>
 #include <stdint.h>
 
+int32_t BitExtend(uint32_t ir, uint32_t num_bits)
+{
+	uint32_t mask = (uint32_t)1 << (num_bits - 1);
+	return (ir ^ mask) - mask;
+}
+
+int32_t BitExtend1(uint32_t ir, uint32_t num_bits)
+{
+	uint32_t mask = (uint32_t)1 << (num_bits - 1);
+	return (ir ^ mask) - mask;
+}
+
 float SNormToFloat(size_t ch_size, uint32_t val)
 {
 	uint32_t MSB = (uint32_t)1 << (ch_size-1);
@@ -8,7 +20,7 @@ float SNormToFloat(size_t ch_size, uint32_t val)
 	{
 		return -1.0f;
 	}
-	int32_t s_val = (val & MSB)? val | ~(((uint32_t)1 << (ch_size))-1) : val; 
+	int32_t s_val = BitExtend1(val, ch_size); 
 	float c = s_val;
 	return c * (1.0f / (MSB - 1));
 }

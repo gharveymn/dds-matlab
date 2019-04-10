@@ -614,37 +614,11 @@ namespace DXTMEX
 		}
 	}
 	
-	
-	uint32_t DXGIPixel::ExtractPixelChannel(size_t idx, int ch_num)
-	{
-		DXGIPixel::PixelChannel &ref_channel = this->_channels[ch_num];
-		size_t bit_offset = idx*this->_pixel_width + ref_channel.offset;
-		size_t byte_offset = bit_offset/sizeof(uint8_t);
-		uint32_t mod_bit_offset = bit_offset%sizeof(uint8_t);
-		
-		if(mod_bit_offset + ref_channel.width > sizeof(uint32_t))
-		{
-			MEXError::PrintMexError(MEU_FL,
-			                        MEU_SEVERITY_INTERNAL,
-			                        "UnexpectedFormatError",
-			                        "A channel could not be extracted because of an internal error with bit indexing.");
-		}
-		
-		uint32_t mask =
-		(((uint32_t)1 << ref_channel.width) - (uint32_t)1) << mod_bit_offset;
-		return (*(uint32_t*)(this->_image->pixels + byte_offset) & mask)
-		>> mod_bit_offset;
-	}
-	
-	
 	void DXGIPixel::ExtractChannel(const size_t* ch_nums, size_t num_ch, mxArray*& out, mxClassID out_class)
 	{
 		DXGIPixel::DATATYPE input_datatype;
 		
-		typedef void (*StorageFunction)(void*, mwIndex, uint32_t);
-		void (*storage_functions[4])(void*, mwIndex, uint32_t);
-		storage_functions[0] = &DXGIPixel::ChannelElement<5, DXGIPixel::SNORM, float>::Store;
-		StorageFunction storage_function = &DXGIPixel::ChannelElement<5, DXGIPixel::SNORM, float>::Store;
+		StorageFunction storage_function = nullptr;
 		
 		/* Determine datatype of MATLAB output.
 		 * Try to do this losslessly unless otherwise specified. */
@@ -692,37 +666,37 @@ namespace DXTMEX
 			case DXGIPixel::SNORM:
 			{
 				out = mxCreateNumericArray(ndim, dims, mxSINGLE_CLASS, mxREAL);
-				storage_function = &DXGIPixel::StoreSNORMAsSingle;
+				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SNORM, mxSingle>::Store;
 				break;
 			}
 			case DXGIPixel::UNORM:
 			{
 				out = mxCreateNumericArray(ndim, dims, mxSINGLE_CLASS, mxREAL);
-				storage_function = &DXGIPixel::StoreUNORMAsSingle;
+				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UNORM, mxSingle>::Store;
 				break;
 			}
 			case DXGIPixel::FLOAT:
 			{
 				out = mxCreateNumericArray(ndim, dims, mxSINGLE_CLASS, mxREAL);
-				storage_function = &DXGIPixel::StoreFLOATAsSingle;
+				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxSingle>::Store;
 				break;
 			}
 			case DXGIPixel::SRGB:
 			{
 				out = mxCreateNumericArray(ndim, dims, mxSINGLE_CLASS, mxREAL);
-				storage_function = &DXGIPixel::StoreSRGBAsSingle;
+				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SRGB, mxSingle>::Store;
 				break;
 			}
 			case DXGIPixel::SHAREDEXP:
 			{
 				out = mxCreateNumericArray(ndim, dims, mxSINGLE_CLASS, mxREAL);
-				storage_function = &DXGIPixel::StoreSHAREDEXPAsSingle;
+				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SHAREDEXP, mxUint16>::Store;
 				break;
 			}
 			case DXGIPixel::XR_BIAS:
 			{
 				out = mxCreateNumericArray(ndim, dims, mxSINGLE_CLASS, mxREAL);
-				storage_function = &DXGIPixel::StoreXR_BIASAsSingle;
+				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::XR_BIAS, mxSingle>::Store;
 				break;
 			}
 			case DXGIPixel::SINT:
@@ -738,22 +712,22 @@ namespace DXTMEX
 				if(max_width == 1)
 				{
 					out = mxCreateLogicalArray(ndim, dims);
-					storage_function = &DXGIPixel::StoreSINTAsLogical;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxLogical>::Store;
 				}
 				else if(max_width <= 8)
 				{
 					out = mxCreateNumericArray(ndim, dims, mxINT8_CLASS, mxREAL);
-					storage_function = &DXGIPixel::StoreSINTAsInt8;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt8>::Store;
 				}
 				else if(max_width <= 16)
 				{
 					out = mxCreateNumericArray(ndim, dims, mxINT16_CLASS, mxREAL);
-					storage_function = &DXGIPixel::StoreSINTAsInt16;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt16>::Store;
 				}
 				else
 				{
 					out = mxCreateNumericArray(ndim, dims, mxINT32_CLASS, mxREAL);
-					storage_function = &DXGIPixel::StoreSINTAsInt32;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt32>::Store;
 				}
 				break;
 			}
@@ -770,22 +744,22 @@ namespace DXTMEX
 				if(max_width == 1)
 				{
 					out = mxCreateLogicalArray(ndim, dims);
-					storage_function = &DXGIPixel::StoreUINTAsLogical;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxLogical>::Store;
 				}
 				else if(max_width <= 8)
 				{
 					out = mxCreateNumericArray(ndim, dims, mxUINT8_CLASS, mxREAL);
-					storage_function = &DXGIPixel::StoreUINTAsUInt8;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint8>::Store;
 				}
 				else if(max_width <= 16)
 				{
 					out = mxCreateNumericArray(ndim, dims, mxUINT16_CLASS, mxREAL);
-					storage_function = &DXGIPixel::StoreUINTAsUInt16;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint16>::Store;
 				}
 				else
 				{
 					out = mxCreateNumericArray(ndim, dims, mxUINT32_CLASS, mxREAL);
-					storage_function = &DXGIPixel::StoreUINTAsUInt32;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint32>::Store;
 				}
 				break;
 			}
@@ -802,22 +776,22 @@ namespace DXTMEX
 				if(max_width == 1)
 				{
 					out = mxCreateLogicalArray(ndim, dims);
-					storage_function = &DXGIPixel::StoreTYPELESSAsLogical;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxLogical>::Store;
 				}
 				else if(max_width <= 8)
 				{
 					out = mxCreateNumericArray(ndim, dims, mxUINT8_CLASS, mxREAL);
-					storage_function = &DXGIPixel::StoreTYPELESSAsUInt8;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint8>::Store;
 				}
 				else if(max_width <= 16)
 				{
 					out = mxCreateNumericArray(ndim, dims, mxUINT16_CLASS, mxREAL);
-					storage_function = &DXGIPixel::StoreTYPELESSAsUInt16;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint16>::Store;
 				}
 				else
 				{
 					out = mxCreateNumericArray(ndim, dims, mxUINT32_CLASS, mxREAL);
-					storage_function = &DXGIPixel::StoreTYPELESSAsUInt32;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint32>::Store;
 				}
 				break;
 			}
@@ -834,16 +808,10 @@ namespace DXTMEX
 		void* data = mxGetData(out);
 		switch(this->_pixel_width)
 		{
-			case 128:
+			case 128: /* always uniform width with 4 channels */
+			case 96:  /* always uniform width with 3 channels*/
 			{
-				/* always uniform width with 4 channels */
-				DXGIPixel::StoreUniformChannels(ch_nums, num_ch, this->_num_channels, (uint32_t*)this->_image->pixels, data);
-				break;
-			}
-			case 96:
-			{
-				/* always uniform width with 3 channels*/
-				DXGIPixel::StoreUniformChannels(ch_nums, num_ch, this->_num_channels, (uint32_t*)this->_image->pixels, data);
+				this->StoreUniformChannels<uint32_t>(ch_nums, num_ch, data, storage_function);
 				break;
 			}
 			case 64:
@@ -855,12 +823,12 @@ namespace DXTMEX
 					{
 						case 2:
 						{
-							DXGIPixel::StoreUniformChannels(ch_nums, num_ch, this->_num_channels, (uint32_t*)this->_image->pixels, data);
+							this->StoreUniformChannels<uint32_t>(ch_nums, num_ch, data, storage_function);
 							break;
 						}
 						case 4:
 						{
-							DXGIPixel::StoreUniformChannels(ch_nums, num_ch, this->_num_channels, (uint16_t*)this->_image->pixels, data);
+							this->StoreUniformChannels<uint16_t>(ch_nums, num_ch, data, storage_function);
 							break;
 						}
 						default:
@@ -886,8 +854,8 @@ namespace DXTMEX
 						for(size_t j = 0; j < num_ch; j++)
 						{
 							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + j * this->_num_pixels;
-							uint32_t channel_data = (*(pixels + i) & masks[ch_nums[j]]) >> this->_channels[ch_nums[j]].offset;
-							storage_function(data, dst_idx, channel_data);
+							auto channel_data = (uint32_t)((*(pixels + i) & masks[ch_nums[j]]) >> this->_channels[ch_nums[j]].offset);
+							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_nums[j]].width);
 						}
 					}
 				}
@@ -901,17 +869,17 @@ namespace DXTMEX
 					{
 						case 1:
 						{
-							DXGIPixel::StoreUniformChannels(ch_nums, num_ch, this->_num_channels, (uint32_t*)this->_image->pixels, data);
+							this->StoreUniformChannels<uint32_t>(ch_nums, num_ch, data, storage_function);
 							break;
 						}
 						case 2:
 						{
-							DXGIPixel::StoreUniformChannels(ch_nums, num_ch, this->_num_channels, (uint16_t*)this->_image->pixels, data);
+							this->StoreUniformChannels<uint16_t>(ch_nums, num_ch, data, storage_function);
 							break;
 						}
 						case 4:
 						{
-							DXGIPixel::StoreUniformChannels(ch_nums, num_ch, this->_num_channels, (uint8_t*)this->_image->pixels, data);
+							this->StoreUniformChannels<uint8_t>(ch_nums, num_ch, data, storage_function);
 							break;
 						}
 						default:
@@ -938,7 +906,7 @@ namespace DXTMEX
 						{
 							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + j * this->_num_pixels;
 							uint32_t channel_data = (*(pixels + i) & masks[ch_nums[j]]) >> this->_channels[ch_nums[j]].offset;
-							storage_function(data, dst_idx, channel_data);
+							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_nums[j]].width);
 						}
 					}
 				}
@@ -952,12 +920,12 @@ namespace DXTMEX
 					{
 						case 1:
 						{
-							DXGIPixel::StoreUniformChannels(ch_nums, num_ch, this->_num_channels, (uint16_t*)this->_image->pixels, data);
+							this->StoreUniformChannels<uint16_t>(ch_nums, num_ch, data, storage_function);
 							break;
 						}
 						case 2:
 						{
-							DXGIPixel::StoreUniformChannels(ch_nums, num_ch, this->_num_channels, (uint8_t*)this->_image->pixels, data);
+							this->StoreUniformChannels<uint8_t>(ch_nums, num_ch, data, storage_function);
 							break;
 						}
 						default:
@@ -975,7 +943,7 @@ namespace DXTMEX
 					uint16_t masks[4];
 					for(size_t i = 0; i < this->_num_channels; i++)
 					{
-						masks[i] =(((uint16_t)1 << this->_channels[i].width) - (uint16_t)1) << this->_channels[i].offset;
+						masks[i] = (uint16_t)(((uint16_t)1 << (uint16_t)this->_channels[i].width) - (uint16_t)1) << this->_channels[i].offset;
 					}
 					
 					for(size_t i = 0; i < this->_num_pixels; i++)
@@ -983,8 +951,8 @@ namespace DXTMEX
 						for(size_t j = 0; j < num_ch; j++)
 						{
 							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + j * this->_num_pixels;
-							uint32_t channel_data = (*(pixels + i) & masks[ch_nums[j]]) >> this->_channels[ch_nums[j]].offset;
-							storage_function(data, dst_idx, channel_data);
+							uint32_t channel_data = (uint16_t)(*(pixels + i) & masks[ch_nums[j]]) >> this->_channels[ch_nums[j]].offset;
+							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_nums[j]].width);
 						}
 					}
 				}
@@ -998,7 +966,7 @@ namespace DXTMEX
 					{
 						case 1:
 						{
-							DXGIPixel::StoreUniformChannels(ch_nums, num_ch, this->_num_channels, (uint8_t*)this->_image->pixels, data);
+							this->StoreUniformChannels<uint8_t>(ch_nums, num_ch, data, storage_function);
 							break;
 						}
 						default:
@@ -1021,20 +989,52 @@ namespace DXTMEX
 			}
 			case 1:
 			{
-				/* use 32-bit uints because DWORD size is fastest on x86-64 and i686 */
-				auto pixels32 = (uint32_t*)this->_image->pixels;
-				size_t i;
-				for(i = 0; i < this->_num_pixels / 32; i++)
+				auto data_l = (mxLogical*)data;
+				size_t i, j, k, l;
+				size_t px_idx = 0;
+				for(i = 0; i < this->_image->height; i++)
 				{
-					uint32_t page = pixels32[i];
-					for(size_t j = 0; j < 32; j++)
+					
+					/* 32-bit width is fastest on x86-64 and i686 */
+					auto pixels32 = (uint32_t*)(this->_image->pixels + i*this->_image->rowPitch);
+					for(j = 0; j < this->_image->rowPitch / 4; j++)
+					{
+						uint32_t page = pixels32[j];
+						for(k = 32; k > 0; k--, px_idx++)
+						{
+							/* there should only be one channel, but it may be repeatedly stored */
+							uint32_t channel_data = (uint32_t)(page >> (k - 1)) & 1u;
+							for(l = 0; l < num_ch; l++)
+							{
+								mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + l * this->_num_pixels;
+								data_l[dst_idx] = channel_data;
+							}
+						}
+					}
+					auto pixels8 = (uint8_t*)pixels32;
+					for(j *= 4; j < this->_image->rowPitch - 1; j++)
+					{
+						uint8_t page = pixels8[j];
+						for(k = 8; k > 0; k--, px_idx++)
+						{
+							/* there should only be one channel, but it may be repeatedly stored */
+							uint8_t channel_data = (uint8_t)(page >> (k - 1)) & 1u;
+							for(l = 0; l < num_ch; l++)
+							{
+								mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + l * this->_num_pixels;
+								data_l[dst_idx] = channel_data;
+							}
+						}
+					}
+					uint8_t page = pixels8[j];
+					for(k = this->_image->width - ((this->_image->rowPitch - 1) * 8); k > 0; k--, px_idx++)
 					{
 						/* there should only be one channel, but it may be repeatedly stored */
-						uint32_t channel_data = (page & ((uint32_t)1 << j)) != 0;
-						for(size_t k = 0; k < num_ch; k++)
+						uint8_t channel_data = (uint8_t)(page >> (k - 1)) & 1u;
+						for(l = 0; l < num_ch; l++)
 						{
-							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + k * this->_num_pixels;
-							storage_function(data, dst_idx, channel_data);
+							mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + l * this->_num_pixels;
+							data_l[dst_idx] = channel_data;
 						}
 					}
 				}
@@ -1043,108 +1043,6 @@ namespace DXTMEX
 	}
 	
 	
-	/* TYPELESS conversions */
-	template <int N, typename OUT_TYPE>
-	struct DXGIPixel::ChannelElement<N, DXGIPixel::TYPELESS, OUT_TYPE>
-	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
-		{
-			/* in the narrowing case this isn't portable */
-			((OUT_TYPE*)data)[dst_idx] = *((OUT_TYPE*)&ir);
-		}
-	};
-	
-	/* SNORM conversions */
-	template <int N>
-	struct DXGIPixel::ChannelElement<N, DXGIPixel::SNORM, mxSingle>
-	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
-		{
-			uint32_t MSB = (uint32_t)1 << (N - 1);
-			if(ir == MSB)
-			{
-				return -1.0f;
-			}
-			mxSingle c = SignExtend(ir);
-			((mxSingle*)data)[dst_idx] = c/(MSB - 1);
-		}
-	};
-	
-	/* UNORM conversions */
-	template <int N>
-	struct DXGIPixel::ChannelElement<N, DXGIPixel::UNORM, mxSingle>
-	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
-		{
-			((mxSingle*)data)[dst_idx] = (mxSingle)ir/(((uint32_t)1 << N) - 1);
-		}
-	};
-	
-	/* SINT conversions */
-	template <int N, typename OUT_TYPE>
-	struct DXGIPixel::ChannelElement<N, DXGIPixel::SINT, OUT_TYPE>
-	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
-		{
-			((OUT_TYPE*)data)[dst_idx] = SignExtend(ir);
-		}
-	};
-	
-	/* UINT conversions */
-	template <int N, typename OUT_TYPE>
-	struct DXGIPixel::ChannelElement<N, DXGIPixel::UINT, OUT_TYPE>
-	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
-		{
-			((OUT_TYPE*)data)[dst_idx] = (OUT_TYPE)ir;
-		}
-	};
-	
-	/* FLOAT conversions */
-	template <int N>
-	struct DXGIPixel::ChannelElement<N, DXGIPixel::FLOAT, mxSingle>
-	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
-		{
-			((float*)data)[dst_idx] = *((float*)&ir);
-		}
-	};
-	
-	/* SRGB conversions */
-	template <int N>
-	struct DXGIPixel::ChannelElement<N, DXGIPixel::SRGB, mxSingle>
-	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
-		{
-			float c = (float)ir/(((uint32_t)1 << N) - 1);
-			if(c <= D3D11_SRGB_TO_FLOAT_THRESHOLD)
-			{
-				((mxSingle*)data)[dst_idx] = c/D3D11_SRGB_TO_FLOAT_DENOMINATOR_1;
-			}
-			else
-			{
-				((mxSingle*)data)[dst_idx] = ((c + D3D11_SRGB_TO_FLOAT_OFFSET)/D3D11_SRGB_TO_FLOAT_DENOMINATOR_2)*D3D11_SRGB_TO_FLOAT_EXPONENT;
-			}
-		}
-	};
-	
-	template <int N>
-	struct DXGIPixel::ChannelElement<N, DXGIPixel::SRGB, mxUint8>
-	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
-		{
-			((mxUint8*)data)[dst_idx] = (mxUint8)ir;
-		}
-	};
-	
-	template <int N>
-	struct DXGIPixel::ChannelElement<N, DXGIPixel::XR_BIAS, mxSingle>
-	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
-		{
-			((mxSingle*)data)[dst_idx] = (float)((ir & 0x3ff) - 0x180) / 510.f;
-		}
-	};
 	
 }
 

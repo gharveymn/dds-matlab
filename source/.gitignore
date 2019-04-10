@@ -67,3 +67,5 @@ _build
 CMakeFiles
 build
 .vscode
+*.exe
+*.out
