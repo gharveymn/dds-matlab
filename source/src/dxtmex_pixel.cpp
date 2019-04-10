@@ -614,29 +614,33 @@ namespace DXTMEX
 		}
 	}
 	
-	void DXGIPixel::ExtractChannel(const size_t* ch_nums, size_t num_ch, mxArray*& out, mxClassID out_class)
+	void DXGIPixel::ExtractChannels(const size_t* ch_indices, const size_t* out_idx, size_t num_idx, mxArray*&out, mxClassID out_class)
 	{
 		DXGIPixel::DATATYPE input_datatype;
 		
 		StorageFunction storage_function = nullptr;
 		
-		/* Determine datatype of MATLAB output.
-		 * Try to do this losslessly unless otherwise specified. */
+		/* find max output index */
+		size_t max_out_idx = 0;
+		for(size_t i = 0; i < num_idx; i++)
+		{
+			max_out_idx = (out_idx[i] > max_out_idx)? out_idx[i] : max_out_idx;
+		}
 		
-		const mwSize dims[] = {this->_image->height, this->_image->width, num_ch};
-		mwSize ndim = ARRAYSIZE(dims);
+		const mwSize out_dims[] = {this->_image->height, this->_image->width, max_out_idx};
+		mwSize ndim = ARRAYSIZE(out_dims);
 		
 		/* check channels requested are inside bounds */
-		for(size_t i = 0; i < num_ch; i++)
+		for(size_t i = 0; i < num_idx; i++)
 		{
-			if(ch_nums[i] >= this->_num_channels)
+			if(ch_indices[i] >= this->_num_channels)
 			{
 				MEXError::PrintMexError(MEU_FL,
 				                        MEU_SEVERITY_USER,
 				                        "InvalidChannelError",
 				                        "Channel index %llu exceeds the bounds of available channels. Restrict "
 					                   "your selection to between 0 and %llu.",
-				                        ch_nums[i], this->_num_channels);
+				                        ch_indices[i], this->_num_channels);
 			}
 		}
 		
@@ -646,10 +650,10 @@ namespace DXTMEX
 		}
 		else
 		{
-			input_datatype = this->_channels[ch_nums[0]].datatype;
-			for(size_t i = 0; i < num_ch; i++)
+			input_datatype = this->_channels[ch_indices[0]].datatype;
+			for(size_t i = 0; i < num_idx; i++)
 			{
-				if(this->_channels[ch_nums[0]].datatype != input_datatype)
+				if(this->_channels[ch_indices[i]].datatype != input_datatype)
 				{
 					MEXError::PrintMexError(MEU_FL,
 					                        MEU_SEVERITY_USER,
@@ -660,42 +664,43 @@ namespace DXTMEX
 			}
 		}
 		
-		/* determine output datatype */
+		/* Determine datatype of MATLAB output.
+		 * Try to do this losslessly unless otherwise specified. */
 		switch(input_datatype)
 		{
 			case DXGIPixel::SNORM:
 			{
-				out = mxCreateNumericArray(ndim, dims, mxSINGLE_CLASS, mxREAL);
+				out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
 				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SNORM, mxSingle>::Store;
 				break;
 			}
 			case DXGIPixel::UNORM:
 			{
-				out = mxCreateNumericArray(ndim, dims, mxSINGLE_CLASS, mxREAL);
+				out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
 				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UNORM, mxSingle>::Store;
 				break;
 			}
 			case DXGIPixel::FLOAT:
 			{
-				out = mxCreateNumericArray(ndim, dims, mxSINGLE_CLASS, mxREAL);
+				out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
 				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxSingle>::Store;
 				break;
 			}
 			case DXGIPixel::SRGB:
 			{
-				out = mxCreateNumericArray(ndim, dims, mxSINGLE_CLASS, mxREAL);
+				out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
 				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SRGB, mxSingle>::Store;
 				break;
 			}
 			case DXGIPixel::SHAREDEXP:
 			{
-				out = mxCreateNumericArray(ndim, dims, mxSINGLE_CLASS, mxREAL);
+				out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
 				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SHAREDEXP, mxUint16>::Store;
 				break;
 			}
 			case DXGIPixel::XR_BIAS:
 			{
-				out = mxCreateNumericArray(ndim, dims, mxSINGLE_CLASS, mxREAL);
+				out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
 				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::XR_BIAS, mxSingle>::Store;
 				break;
 			}
@@ -703,30 +708,30 @@ namespace DXTMEX
 			{
 				/* get max width of selected channels */
 				size_t max_width = 0;
-				for(size_t i = 0; i < num_ch; i++)
+				for(size_t i = 0; i < num_idx; i++)
 				{
-					max_width = (this->_channels[ch_nums[i]].width > max_width)? this->_channels[ch_nums[i]].width : max_width;
+					max_width = (this->_channels[ch_indices[i]].width > max_width)? this->_channels[ch_indices[i]].width : max_width;
 				}
 				
 				/* determine MATLAB class width */
 				if(max_width == 1)
 				{
-					out = mxCreateLogicalArray(ndim, dims);
+					out = mxCreateLogicalArray(ndim, out_dims);
 					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxLogical>::Store;
 				}
 				else if(max_width <= 8)
 				{
-					out = mxCreateNumericArray(ndim, dims, mxINT8_CLASS, mxREAL);
+					out = mxCreateNumericArray(ndim, out_dims, mxINT8_CLASS, mxREAL);
 					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt8>::Store;
 				}
 				else if(max_width <= 16)
 				{
-					out = mxCreateNumericArray(ndim, dims, mxINT16_CLASS, mxREAL);
+					out = mxCreateNumericArray(ndim, out_dims, mxINT16_CLASS, mxREAL);
 					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt16>::Store;
 				}
 				else
 				{
-					out = mxCreateNumericArray(ndim, dims, mxINT32_CLASS, mxREAL);
+					out = mxCreateNumericArray(ndim, out_dims, mxINT32_CLASS, mxREAL);
 					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt32>::Store;
 				}
 				break;
@@ -735,30 +740,30 @@ namespace DXTMEX
 			{
 				/* get max width of selected channels */
 				size_t max_width = 0;
-				for(size_t i = 0; i < num_ch; i++)
+				for(size_t i = 0; i < num_idx; i++)
 				{
-					max_width = (this->_channels[ch_nums[i]].width > max_width)? this->_channels[ch_nums[i]].width : max_width;
+					max_width = (this->_channels[ch_indices[i]].width > max_width)? this->_channels[ch_indices[i]].width : max_width;
 				}
 				
 				/* determine MATLAB class width */
 				if(max_width == 1)
 				{
-					out = mxCreateLogicalArray(ndim, dims);
+					out = mxCreateLogicalArray(ndim, out_dims);
 					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxLogical>::Store;
 				}
 				else if(max_width <= 8)
 				{
-					out = mxCreateNumericArray(ndim, dims, mxUINT8_CLASS, mxREAL);
+					out = mxCreateNumericArray(ndim, out_dims, mxUINT8_CLASS, mxREAL);
 					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint8>::Store;
 				}
 				else if(max_width <= 16)
 				{
-					out = mxCreateNumericArray(ndim, dims, mxUINT16_CLASS, mxREAL);
+					out = mxCreateNumericArray(ndim, out_dims, mxUINT16_CLASS, mxREAL);
 					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint16>::Store;
 				}
 				else
 				{
-					out = mxCreateNumericArray(ndim, dims, mxUINT32_CLASS, mxREAL);
+					out = mxCreateNumericArray(ndim, out_dims, mxUINT32_CLASS, mxREAL);
 					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint32>::Store;
 				}
 				break;
@@ -767,30 +772,30 @@ namespace DXTMEX
 			{
 				/* get max width of selected channels */
 				size_t max_width = 0;
-				for(size_t i = 0; i < num_ch; i++)
+				for(size_t i = 0; i < num_idx; i++)
 				{
-					max_width = (this->_channels[ch_nums[i]].width > max_width)? this->_channels[ch_nums[i]].width : max_width;
+					max_width = (this->_channels[ch_indices[i]].width > max_width)? this->_channels[ch_indices[i]].width : max_width;
 				}
 				
 				/* determine MATLAB class width */
 				if(max_width == 1)
 				{
-					out = mxCreateLogicalArray(ndim, dims);
+					out = mxCreateLogicalArray(ndim, out_dims);
 					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxLogical>::Store;
 				}
 				else if(max_width <= 8)
 				{
-					out = mxCreateNumericArray(ndim, dims, mxUINT8_CLASS, mxREAL);
+					out = mxCreateNumericArray(ndim, out_dims, mxUINT8_CLASS, mxREAL);
 					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint8>::Store;
 				}
 				else if(max_width <= 16)
 				{
-					out = mxCreateNumericArray(ndim, dims, mxUINT16_CLASS, mxREAL);
+					out = mxCreateNumericArray(ndim, out_dims, mxUINT16_CLASS, mxREAL);
 					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint16>::Store;
 				}
 				else
 				{
-					out = mxCreateNumericArray(ndim, dims, mxUINT32_CLASS, mxREAL);
+					out = mxCreateNumericArray(ndim, out_dims, mxUINT32_CLASS, mxREAL);
 					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint32>::Store;
 				}
 				break;
@@ -811,7 +816,7 @@ namespace DXTMEX
 			case 128: /* always uniform width with 4 channels */
 			case 96:  /* always uniform width with 3 channels*/
 			{
-				this->StoreUniformChannels<uint32_t>(ch_nums, num_ch, data, storage_function);
+				this->StoreUniformChannels<uint32_t>(ch_indices, out_idx, num_idx, data, storage_function);
 				break;
 			}
 			case 64:
@@ -823,12 +828,12 @@ namespace DXTMEX
 					{
 						case 2:
 						{
-							this->StoreUniformChannels<uint32_t>(ch_nums, num_ch, data, storage_function);
+							this->StoreUniformChannels<uint32_t>(ch_indices, out_idx, num_idx, data, storage_function);
 							break;
 						}
 						case 4:
 						{
-							this->StoreUniformChannels<uint16_t>(ch_nums, num_ch, data, storage_function);
+							this->StoreUniformChannels<uint16_t>(ch_indices, out_idx, num_idx, data, storage_function);
 							break;
 						}
 						default:
@@ -851,11 +856,11 @@ namespace DXTMEX
 					
 					for(size_t i = 0; i < this->_num_pixels; i++)
 					{
-						for(size_t j = 0; j < num_ch; j++)
+						for(size_t j = 0; j < num_idx; j++)
 						{
-							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + j * this->_num_pixels;
-							auto channel_data = (uint32_t)((*(pixels + i) & masks[ch_nums[j]]) >> this->_channels[ch_nums[j]].offset);
-							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_nums[j]].width);
+							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels;
+							auto channel_data = (uint32_t)((*(pixels + i) & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset);
+							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_indices[j]].width);
 						}
 					}
 				}
@@ -869,17 +874,17 @@ namespace DXTMEX
 					{
 						case 1:
 						{
-							this->StoreUniformChannels<uint32_t>(ch_nums, num_ch, data, storage_function);
+							this->StoreUniformChannels<uint32_t>(ch_indices, out_idx, num_idx, data, storage_function);
 							break;
 						}
 						case 2:
 						{
-							this->StoreUniformChannels<uint16_t>(ch_nums, num_ch, data, storage_function);
+							this->StoreUniformChannels<uint16_t>(ch_indices, out_idx, num_idx, data, storage_function);
 							break;
 						}
 						case 4:
 						{
-							this->StoreUniformChannels<uint8_t>(ch_nums, num_ch, data, storage_function);
+							this->StoreUniformChannels<uint8_t>(ch_indices, out_idx, num_idx, data, storage_function);
 							break;
 						}
 						default:
@@ -902,11 +907,11 @@ namespace DXTMEX
 					
 					for(size_t i = 0; i < this->_num_pixels; i++)
 					{
-						for(size_t j = 0; j < num_ch; j++)
+						for(size_t j = 0; j < num_idx; j++)
 						{
-							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + j * this->_num_pixels;
-							uint32_t channel_data = (*(pixels + i) & masks[ch_nums[j]]) >> this->_channels[ch_nums[j]].offset;
-							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_nums[j]].width);
+							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels;
+							uint32_t channel_data = (*(pixels + i) & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset;
+							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_indices[j]].width);
 						}
 					}
 				}
@@ -920,12 +925,12 @@ namespace DXTMEX
 					{
 						case 1:
 						{
-							this->StoreUniformChannels<uint16_t>(ch_nums, num_ch, data, storage_function);
+							this->StoreUniformChannels<uint16_t>(ch_indices, out_idx, num_idx, data, storage_function);
 							break;
 						}
 						case 2:
 						{
-							this->StoreUniformChannels<uint8_t>(ch_nums, num_ch, data, storage_function);
+							this->StoreUniformChannels<uint8_t>(ch_indices, out_idx, num_idx, data, storage_function);
 							break;
 						}
 						default:
@@ -948,11 +953,11 @@ namespace DXTMEX
 					
 					for(size_t i = 0; i < this->_num_pixels; i++)
 					{
-						for(size_t j = 0; j < num_ch; j++)
+						for(size_t j = 0; j < num_idx; j++)
 						{
-							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + j * this->_num_pixels;
-							uint32_t channel_data = (uint16_t)(*(pixels + i) & masks[ch_nums[j]]) >> this->_channels[ch_nums[j]].offset;
-							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_nums[j]].width);
+							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels;
+							uint32_t channel_data = (uint16_t)(*(pixels + i) & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset;
+							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_indices[j]].width);
 						}
 					}
 				}
@@ -966,7 +971,7 @@ namespace DXTMEX
 					{
 						case 1:
 						{
-							this->StoreUniformChannels<uint8_t>(ch_nums, num_ch, data, storage_function);
+							this->StoreUniformChannels<uint8_t>(ch_indices, out_idx, num_idx, data, storage_function);
 							break;
 						}
 						default:
@@ -1004,9 +1009,9 @@ namespace DXTMEX
 						{
 							/* there should only be one channel, but it may be repeatedly stored */
 							uint32_t channel_data = (uint32_t)(page >> (k - 1)) & 1u;
-							for(l = 0; l < num_ch; l++)
+							for(l = 0; l < num_idx; l++)
 							{
-								mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + l * this->_num_pixels;
+								mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + out_idx[l] * this->_num_pixels;
 								data_l[dst_idx] = channel_data;
 							}
 						}
@@ -1019,9 +1024,9 @@ namespace DXTMEX
 						{
 							/* there should only be one channel, but it may be repeatedly stored */
 							uint8_t channel_data = (uint8_t)(page >> (k - 1)) & 1u;
-							for(l = 0; l < num_ch; l++)
+							for(l = 0; l < num_idx; l++)
 							{
-								mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + l * this->_num_pixels;
+								mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + out_idx[l] * this->_num_pixels;
 								data_l[dst_idx] = channel_data;
 							}
 						}
@@ -1031,9 +1036,9 @@ namespace DXTMEX
 					{
 						/* there should only be one channel, but it may be repeatedly stored */
 						uint8_t channel_data = (uint8_t)(page >> (k - 1)) & 1u;
-						for(l = 0; l < num_ch; l++)
+						for(l = 0; l < num_idx; l++)
 						{
-							mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + l * this->_num_pixels;
+							mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + out_idx[l] * this->_num_pixels;
 							data_l[dst_idx] = channel_data;
 						}
 					}
@@ -1042,7 +1047,77 @@ namespace DXTMEX
 		}
 	}
 	
+	void DXGIPixel::ExtractRGB(mxArray*& rgb)
+	{
+		size_t ch_indices[MAX_CHANNELS];
+		size_t out_idx[MAX_CHANNELS];
+		if(DirectX::HasAlpha(this->_format))
+		{
+			for(size_t i = 0, j = 0; i < this->_num_channels; i++)
+			{
+				if(this->_channels[i].name != 'a')
+				{
+					ch_indices[j] = i;
+					out_idx[j] = this->_channels[i].standard_idx;
+					j++;
+				}
+			}
+			this->ExtractChannels(ch_indices, out_idx, this->_num_channels - 1, rgb);
+		}
+		else
+		{
+			for(size_t i = 0; i < this->_num_channels; i++)
+			{
+				ch_indices[i] = i;
+				out_idx[i] = this->_channels[i].standard_idx;
+			}
+			this->ExtractChannels(ch_indices, out_idx, this->_num_channels, rgb);
+		}
+	}
 	
+	void DXGIPixel::ExtractRGBA(mxArray*& rgba)
+	{
+		size_t ch_indices[MAX_CHANNELS];
+		size_t out_idx[MAX_CHANNELS];
+		for(size_t i = 0; i < this->_num_channels; i++)
+		{
+			ch_indices[i] = i;
+			out_idx[i] = this->_channels[i].standard_idx;
+		}
+		this->ExtractChannels(ch_indices, out_idx, this->_num_channels, rgba);
+	}
 	
+	void DXGIPixel::ExtractRGBA(mxArray*& rgb, mxArray*& a)
+	{
+		size_t ch_indices[MAX_CHANNELS];
+		size_t out_idx[MAX_CHANNELS];
+		if(DirectX::HasAlpha(this->_format))
+		{
+			for(size_t i = 0, j = 0; i < this->_num_channels; i++)
+			{
+				if(this->_channels[i].name != 'a')
+				{
+					ch_indices[j] = i;
+					out_idx[j] = this->_channels[i].standard_idx;
+					j++;
+				}
+				else
+				{
+					this->ExtractChannels(i, 0, 1, a);
+				}
+			}
+			this->ExtractChannels(ch_indices, out_idx, this->_num_channels - 1, rgb);
+		}
+		else
+		{
+			for(size_t i = 0; i < this->_num_channels; i++)
+			{
+				ch_indices[i] = i;
+				out_idx[i] = this->_channels[i].standard_idx;
+			}
+			this->ExtractChannels(ch_indices, out_idx, this->_num_channels, rgb);
+			a = mxCreateDoubleMatrix(0, 0, mxREAL);
+		}
+	}
 }
 

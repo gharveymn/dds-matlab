@@ -58,11 +58,17 @@ namespace DXTMEX
 			this->SetChannels(fmt);
 		}
 		
-		void ExtractChannel(const size_t* ch_nums, size_t num_ch, mxArray*& out, mxClassID out_class = mxUNKNOWN_CLASS);
+		void ExtractChannels(const size_t* ch_idx, const size_t* out_idx, size_t num_idx, mxArray*& out, mxClassID out_class = mxUNKNOWN_CLASS);
+		inline void ExtractChannels(size_t ch_idx, size_t out_idx, size_t num_idx, mxArray*& out, mxClassID out_class = mxUNKNOWN_CLASS)
+		{
+			const size_t ch_idx_arr[1]  = {ch_idx};
+			const size_t out_idx_arr[1] = {out_idx};
+			this->ExtractChannels(ch_idx_arr, out_idx_arr, 1, out, out_class);
+		}
 		
 		void ExtractRGB(mxArray*& rgb);
 		void ExtractRGBA(mxArray*& rgba);
-		void ExtractRGBA(mxArray*& rgb, mxArray* a);
+		void ExtractRGBA(mxArray*& rgb, mxArray*& a);
 		
 		
 	private:
@@ -204,16 +210,16 @@ namespace DXTMEX
 		void SetChannels(DXGI_FORMAT);
 		
 		template <typename T>
-		inline void StoreUniformChannels(const size_t* ch_nums, size_t num_ch_nums, void* data, StorageFunction storage_function)
+		inline void StoreUniformChannels(const size_t* ch_idx, const size_t* out_idx,  size_t num_idx, void* data, StorageFunction storage_function)
 		{
 			auto pixels = (T*)this->_image->pixels;
 			for(size_t i = 0; i < this->_num_pixels; i++)
 			{
 				auto v_pix = pixels + i*this->_num_channels;
-				for(size_t j = 0; j < num_ch_nums; j++)
+				for(size_t j = 0; j < num_idx; j++)
 				{
-					mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + j * this->_num_pixels;
-					storage_function(data, dst_idx, *(pixels + i*this->_num_channels + ch_nums[j]), (uint32_t)(sizeof(T) * 8));
+					mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels;
+					storage_function(data, dst_idx, *(pixels + i*this->_num_channels + ch_idx[j]), (uint32_t)(sizeof(T) * 8));
 				}
 			}
 		}
