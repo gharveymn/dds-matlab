@@ -40,7 +40,7 @@ namespace DXTMEX
 		DXGIPixel::PixelChannel _channels[MAX_CHANNELS];
 		const DirectX::Image*   _image;
 		const DXGI_FORMAT       _format;
-		DXGIPixel::DATATYPE     _uniform_datatype;
+		bool                    _has_uniform_datatype;
 		bool                    _has_uniform_width;
 		
 		/* getChannel */
@@ -53,7 +53,7 @@ namespace DXTMEX
 		_num_channels(0),
 		_channels{0},
 		_image(image),
-		_uniform_datatype(TYPELESS),
+		_has_uniform_datatype(false),
 		_has_uniform_width(false)
 		{
 			this->SetChannels(fmt);
@@ -61,30 +61,41 @@ namespace DXTMEX
 		
 		uint32_t DXGIPixel::ExtractPixelChannel(size_t idx, int ch_num);
 		
-		void ExtractChannel(const size_t* ch_nums, size_t num_ch, mxArray*& out);
+		void ExtractChannel(const size_t* ch_nums, size_t num_ch, mxArray*& out, mxClassID out_class = mxUNKNOWN_CLASS);
 		
-		void StoreTYPELESSAsSingle(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreTYPELESSAsInt8(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreTYPELESSAsInt16(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreTYPELESSAsInt32(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreTYPELESSAsUInt8(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreTYPELESSAsUInt16(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreTYPELESSAsUInt32(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreSNORMAsSingle(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreUNORMAsSingle(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreSINTAsLogical(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreSINTAsInt8(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreSINTAsInt16(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreSINTAsInt32(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreUINTAsLogical(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreUINTAsUInt8(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreUINTAsUInt16(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreUINTAsUInt32(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreFLOATAsSingle(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreSRGBAsSingle(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreSRGBAsUInt8(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreSHAREDEXPAsSingle(void* data, mwIndex dst_idx, uint32_t ir);
-		void StoreXR_BIASAsSingle(void* data, mwIndex dst_idx, uint32_t ir);
+		template <int, DXGIPixel::DATATYPE, typename OUT_TYPE>
+		struct ChannelElement
+		{
+			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir) {};
+			static inline OUT_TYPE SignExtend(uint32_t ir)
+			{
+				struct {OUT_TYPE bits:N;} s;
+				return s.bits = ir;
+			}
+		};
+		
+//		void StoreTYPELESSAsSingle(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreTYPELESSAsInt8(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreTYPELESSAsInt16(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreTYPELESSAsInt32(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreTYPELESSAsUInt8(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreTYPELESSAsUInt16(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreTYPELESSAsUInt32(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreSNORMAsSingle(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreUNORMAsSingle(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreSINTAsLogical(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreSINTAsInt8(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreSINTAsInt16(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreSINTAsInt32(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreUINTAsLogical(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreUINTAsUInt8(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreUINTAsUInt16(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreUINTAsUInt32(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreFLOATAsSingle(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreSRGBAsSingle(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreSRGBAsUInt8(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreSHAREDEXPAsSingle(void* data, mwIndex dst_idx, uint32_t ir);
+//		void StoreXR_BIASAsSingle(void* data, mwIndex dst_idx, uint32_t ir);
 		
 		void ExtractRGB(mxArray*& rgb);
 		void ExtractRGBA(mxArray*& rgba);

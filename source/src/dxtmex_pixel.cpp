@@ -583,28 +583,23 @@ namespace DXTMEX
 				                        GetFormatStringFromID(fmt).c_str());
 			}
 			
-			/* check for uniform datatype */
-			this->_uniform_datatype = this->_channels[0].datatype;
-			for(size_t i = 1; i < this->_num_channels; i++)
-			{
-				if(this->_channels[i].datatype != this->_uniform_datatype)
-				{
-					this->_uniform_datatype = TYPELESS;
-				}
-			}
-			
-			/* check for uniform width */
+			/* check for uniform datatype and width */
 			this->_has_uniform_width = true;
+			this->_has_uniform_datatype = true;
 			for(size_t i = 1; i < this->_num_channels; i++)
 			{
 				if(this->_channels[i].width != this->_channels[0].width)
 				{
 					this->_has_uniform_width = false;
 				}
+				if(this->_channels[i].datatype != this->_channels[0].datatype)
+				{
+					this->_has_uniform_datatype = false;
+				}
 			}
 			
 			/* make sure all channel widths are <= 32 bits wide */
-			/* assumptions are made below which depend on this */
+			/* assumptions are made later which depend on this */
 			for(size_t i = 0; i < this->_num_channels; i++)
 			{
 				if(this->_channels[i].width > 32)
@@ -642,10 +637,14 @@ namespace DXTMEX
 	}
 	
 	
-	void DXGIPixel::ExtractChannel(const size_t* ch_nums, size_t num_ch, mxArray*& out)
+	void DXGIPixel::ExtractChannel(const size_t* ch_nums, size_t num_ch, mxArray*& out, mxClassID out_class)
 	{
-		DXGIPixel::DATATYPE input_datatype = DXGIPixel::TYPELESS;
-		void (DXGIPixel::*storage_function)(void*, mwIndex, uint32_t) = nullptr;
+		DXGIPixel::DATATYPE input_datatype;
+		
+		typedef void (*StorageFunction)(void*, mwIndex, uint32_t);
+		void (*storage_functions[4])(void*, mwIndex, uint32_t);
+		storage_functions[0] = &DXGIPixel::ChannelElement<5, DXGIPixel::SNORM, float>::Store;
+		StorageFunction storage_function = &DXGIPixel::ChannelElement<5, DXGIPixel::SNORM, float>::Store;
 		
 		/* Determine datatype of MATLAB output.
 		 * Try to do this losslessly unless otherwise specified. */
@@ -667,9 +666,9 @@ namespace DXTMEX
 			}
 		}
 		
-		if(this->_uniform_datatype != DXGIPixel::TYPELESS)
+		if(this->_has_uniform_datatype)
 		{
-			input_datatype = this->_uniform_datatype;
+			input_datatype = this->_channels[0].datatype;
 		}
 		else
 		{
@@ -678,14 +677,17 @@ namespace DXTMEX
 			{
 				if(this->_channels[ch_nums[0]].datatype != input_datatype)
 				{
-					input_datatype = DXGIPixel::TYPELESS;
+					MEXError::PrintMexError(MEU_FL,
+					                        MEU_SEVERITY_USER,
+					                        "IncompatibleDatatypesError",
+					                        "The datatypes of the format must be uniform to output to a single matrix.");
 					break;
 				}
 			}
 		}
 		
 		/* determine output datatype */
-		switch(this->_channels[0].datatype)
+		switch(input_datatype)
 		{
 			case DXGIPixel::SNORM:
 			{
@@ -788,6 +790,37 @@ namespace DXTMEX
 				break;
 			}
 			case DXGIPixel::TYPELESS:
+			{
+				/* get max width of selected channels */
+				size_t max_width = 0;
+				for(size_t i = 0; i < num_ch; i++)
+				{
+					max_width = (this->_channels[ch_nums[i]].width > max_width)? this->_channels[ch_nums[i]].width : max_width;
+				}
+				
+				/* determine MATLAB class width */
+				if(max_width == 1)
+				{
+					out = mxCreateLogicalArray(ndim, dims);
+					storage_function = &DXGIPixel::StoreTYPELESSAsLogical;
+				}
+				else if(max_width <= 8)
+				{
+					out = mxCreateNumericArray(ndim, dims, mxUINT8_CLASS, mxREAL);
+					storage_function = &DXGIPixel::StoreTYPELESSAsUInt8;
+				}
+				else if(max_width <= 16)
+				{
+					out = mxCreateNumericArray(ndim, dims, mxUINT16_CLASS, mxREAL);
+					storage_function = &DXGIPixel::StoreTYPELESSAsUInt16;
+				}
+				else
+				{
+					out = mxCreateNumericArray(ndim, dims, mxUINT32_CLASS, mxREAL);
+					storage_function = &DXGIPixel::StoreTYPELESSAsUInt32;
+				}
+				break;
+			}
 			default:
 			{
 				/* must have uniform type */
@@ -854,7 +887,7 @@ namespace DXTMEX
 						{
 							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + j * this->_num_pixels;
 							uint32_t channel_data = (*(pixels + i) & masks[ch_nums[j]]) >> this->_channels[ch_nums[j]].offset;
-							(this->*storage_function)(data, dst_idx, channel_data);
+							storage_function(data, dst_idx, channel_data);
 						}
 					}
 				}
@@ -905,7 +938,7 @@ namespace DXTMEX
 						{
 							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + j * this->_num_pixels;
 							uint32_t channel_data = (*(pixels + i) & masks[ch_nums[j]]) >> this->_channels[ch_nums[j]].offset;
-							(this->*storage_function)(data, dst_idx, channel_data);
+							storage_function(data, dst_idx, channel_data);
 						}
 					}
 				}
@@ -951,7 +984,7 @@ namespace DXTMEX
 						{
 							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + j * this->_num_pixels;
 							uint32_t channel_data = (*(pixels + i) & masks[ch_nums[j]]) >> this->_channels[ch_nums[j]].offset;
-							(this->*storage_function)(data, dst_idx, channel_data);
+							storage_function(data, dst_idx, channel_data);
 						}
 					}
 				}
@@ -1001,51 +1034,117 @@ namespace DXTMEX
 						for(size_t k = 0; k < num_ch; k++)
 						{
 							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + k * this->_num_pixels;
-							(this->*storage_function)(data, dst_idx, channel_data);
+							storage_function(data, dst_idx, channel_data);
 						}
 					}
 				}
 			}
-			
 		}
 	}
 	
 	
-	inline float DXGIPixel::SNormToFloat(size_t ch_size, uint32_t val)
+	/* TYPELESS conversions */
+	template <int N, typename OUT_TYPE>
+	struct DXGIPixel::ChannelElement<N, DXGIPixel::TYPELESS, OUT_TYPE>
 	{
-		uint32_t MSB = (uint32_t)1 << (ch_size - 1);
-		if(val == MSB)
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
 		{
-			return -1.0f;
+			/* in the narrowing case this isn't portable */
+			((OUT_TYPE*)data)[dst_idx] = *((OUT_TYPE*)&ir);
 		}
-		int32_t s_val = (val & MSB)? val | ~(((uint32_t)1 << (ch_size)) - 1)
-		                           : val;
-		float c = s_val;
-		return c/(MSB - 1);
-	}
+	};
 	
-	
-	inline float DXGIPixel::UNormToFloat(size_t ch_size, uint32_t val)
+	/* SNORM conversions */
+	template <int N>
+	struct DXGIPixel::ChannelElement<N, DXGIPixel::SNORM, mxSingle>
 	{
-		return (float)val/(((uint32_t)1 << ch_size) - 1);
-	}
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
+		{
+			uint32_t MSB = (uint32_t)1 << (N - 1);
+			if(ir == MSB)
+			{
+				return -1.0f;
+			}
+			mxSingle c = SignExtend(ir);
+			((mxSingle*)data)[dst_idx] = c/(MSB - 1);
+		}
+	};
 	
-	
-	inline float DXGIPixel::SRGBToFloat(size_t ch_size, uint32_t val)
+	/* UNORM conversions */
+	template <int N>
+	struct DXGIPixel::ChannelElement<N, DXGIPixel::UNORM, mxSingle>
 	{
-		float c = (float)val/(((uint32_t)1 << ch_size) - 1);
-		if(c <= D3D11_SRGB_TO_FLOAT_THRESHOLD)
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
 		{
-			return c/D3D11_SRGB_TO_FLOAT_DENOMINATOR_1;
+			((mxSingle*)data)[dst_idx] = (mxSingle)ir/(((uint32_t)1 << N) - 1);
 		}
-		else
+	};
+	
+	/* SINT conversions */
+	template <int N, typename OUT_TYPE>
+	struct DXGIPixel::ChannelElement<N, DXGIPixel::SINT, OUT_TYPE>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
 		{
-			return ((c + D3D11_SRGB_TO_FLOAT_OFFSET)/
-			        D3D11_SRGB_TO_FLOAT_DENOMINATOR_2)*
-			       D3D11_SRGB_TO_FLOAT_EXPONENT;
-			D3D11_SRGB_TO_FLOAT_TOLERANCE_IN_ULP
+			((OUT_TYPE*)data)[dst_idx] = SignExtend(ir);
 		}
-	}
+	};
+	
+	/* UINT conversions */
+	template <int N, typename OUT_TYPE>
+	struct DXGIPixel::ChannelElement<N, DXGIPixel::UINT, OUT_TYPE>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
+		{
+			((OUT_TYPE*)data)[dst_idx] = (OUT_TYPE)ir;
+		}
+	};
+	
+	/* FLOAT conversions */
+	template <int N>
+	struct DXGIPixel::ChannelElement<N, DXGIPixel::FLOAT, mxSingle>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
+		{
+			((float*)data)[dst_idx] = *((float*)&ir);
+		}
+	};
+	
+	/* SRGB conversions */
+	template <int N>
+	struct DXGIPixel::ChannelElement<N, DXGIPixel::SRGB, mxSingle>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
+		{
+			float c = (float)ir/(((uint32_t)1 << N) - 1);
+			if(c <= D3D11_SRGB_TO_FLOAT_THRESHOLD)
+			{
+				((mxSingle*)data)[dst_idx] = c/D3D11_SRGB_TO_FLOAT_DENOMINATOR_1;
+			}
+			else
+			{
+				((mxSingle*)data)[dst_idx] = ((c + D3D11_SRGB_TO_FLOAT_OFFSET)/D3D11_SRGB_TO_FLOAT_DENOMINATOR_2)*D3D11_SRGB_TO_FLOAT_EXPONENT;
+			}
+		}
+	};
+	
+	template <int N>
+	struct DXGIPixel::ChannelElement<N, DXGIPixel::SRGB, mxUint8>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
+		{
+			((mxUint8*)data)[dst_idx] = (mxUint8)ir;
+		}
+	};
+	
+	template <int N>
+	struct DXGIPixel::ChannelElement<N, DXGIPixel::XR_BIAS, mxSingle>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir)
+		{
+			((mxSingle*)data)[dst_idx] = (float)((ir & 0x3ff) - 0x180) / 510.f;
+		}
+	};
 	
 }
 
