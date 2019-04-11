@@ -1438,6 +1438,53 @@ void DXTImageArray::WriteTGA(MEXF_IN)
 void DXTImageArray::ToImage(MEXF_SIG)
 {
 	size_t i;
+	bool combine_alpha = false;
+	if(nrhs > 2)
+	{
+		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
+	}
+	
+	if(nrhs > 0)
+	{
+		if(!mxIsChar(prhs[0]))
+		{
+			MEXError::PrintMexError(MEU_FL,
+			                        MEU_SEVERITY_USER,
+			                        "InvalidKeyError",
+			                        "All keys must be class 'char'.");
+		}
+		
+		if(nrhs == 1)
+		{
+			MEXError::PrintMexError(MEU_FL,
+			                        MEU_SEVERITY_USER,
+			                        "KeyValueError",
+			                        "Invalid number of arguments. The key '%s' is missing a value.", mxArrayToString(prhs[0]));
+		}
+		
+		if(!mxIsLogicalScalar(prhs[1]))
+		{
+			MEXError::PrintMexError(MEU_FL,
+			                        MEU_SEVERITY_USER,
+			                        "InvalidValueError",
+			                        "All flag values must be scalar class 'logical'.");
+		}
+		
+		MEXUtils::ToUpper((mxArray*)prhs[0]);
+		if(MEXUtils::CompareMEXString(prhs[0], "COMBINEALPHA"))
+		{
+			if(nlhs > 1)
+			{
+				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "MatrixOptionError", "The 'CombineAlpha' option requires either 0 or 1 outputs.");
+			}
+			combine_alpha = true;
+		}
+		else
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "MatrixOptionError", "Unrecognized option '%s'.", mxArrayToString(prhs[0]));
+		}
+	}
+	
 	if(this->GetSize() == 1)
 	{
 		if(nlhs > 1)
@@ -1446,7 +1493,7 @@ void DXTImageArray::ToImage(MEXF_SIG)
 		}
 		else
 		{
-			this->GetDXTImage(0).ToImage(plhs[0]);
+			this->GetDXTImage(0).ToImage(plhs[0], combine_alpha);
 		}
 	}
 	else
@@ -1469,7 +1516,7 @@ void DXTImageArray::ToImage(MEXF_SIG)
 			for(i = 0; i < this->GetSize(); i++)
 			{
 				mxArray* tmp;
-				this->GetDXTImage(i).ToImage(tmp);
+				this->GetDXTImage(i).ToImage(tmp, combine_alpha);
 				mxSetCell(plhs[0], i, tmp);
 			}
 			
@@ -1481,13 +1528,37 @@ void DXTImageArray::ToMatrix(MEXF_SIG)
 {
 	size_t i;
 	bool combine_alpha = false;
-	if(nrhs > 1)
+	if(nrhs > 2)
 	{
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "TooManyArgumentsError", "Too many arguments.");
 	}
 	
-	if(nrhs == 1)
+	if(nrhs > 0)
 	{
+		if(!mxIsChar(prhs[0]))
+		{
+			MEXError::PrintMexError(MEU_FL,
+			                        MEU_SEVERITY_USER,
+			                        "InvalidKeyError",
+			                        "All keys must be class 'char'.");
+		}
+		
+		if(nrhs == 1)
+		{
+			MEXError::PrintMexError(MEU_FL,
+			                        MEU_SEVERITY_USER,
+			                        "KeyValueError",
+			                        "Invalid number of arguments. The key '%s' is missing a value.", mxArrayToString(prhs[0]));
+		}
+		
+		if(!mxIsLogicalScalar(prhs[1]))
+		{
+			MEXError::PrintMexError(MEU_FL,
+			                        MEU_SEVERITY_USER,
+			                        "InvalidValueError",
+			                        "All flag values must be scalar class 'logical'.");
+		}
+		
 		MEXUtils::ToUpper((mxArray*)prhs[0]);
 		if(MEXUtils::CompareMEXString(prhs[0], "COMBINEALPHA"))
 		{

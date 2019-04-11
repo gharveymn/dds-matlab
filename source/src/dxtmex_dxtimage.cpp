@@ -5,6 +5,7 @@
 #include "dxtmex_mexutils.hpp"
 #include "dxtmex_maps.hpp"
 #include "dxtmex_flags.hpp"
+#include "dxtmex_pixel.hpp"
 
 using namespace DXTMEX;
 
@@ -336,51 +337,57 @@ void DXTImage::PrepareImages(DXTImage &out)
 	}
 }
 
-void DXTImage::ToImage(mxArray*& mx_dxtimage_rgb)
+void DXTImage::ToImage(mxArray*& mx_dxtimage_rgb, bool combine_alpha)
 {
 	DXTImage prepared_images;
 	this->PrepareImages(prepared_images);
-	prepared_images.FormMatrix(mx_dxtimage_rgb);
+	prepared_images.ToMatrix(mx_dxtimage_rgb, combine_alpha);
 }
 
 void DXTImage::ToImage(mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a)
 {
 	DXTImage prepared_images;
 	this->PrepareImages(prepared_images);
-	prepared_images.FormMatrix(mx_dxtimage_rgb, mx_dxtimage_a);
+	prepared_images.ToMatrix(mx_dxtimage_rgb, mx_dxtimage_a);
 }
 
 void DXTImage::ToMatrix(mxArray*& mx_dxtimage_rgb, bool combine_alpha)
 {
-	this->FormMatrix(mx_dxtimage_rgb, combine_alpha);
-}
-
-void DXTImage::ToMatrix(mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a)
-{
-	this->FormMatrix(mx_dxtimage_rgb, mx_dxtimage_a);
-}
-
-void DXTImage::FormMatrix(mxArray*& mx_dxtimage_rgb, bool combine_alpha)
-{
-	mxArray* tmp_rgb;
 	size_t i, j, k;
-	
 	if(this->GetImageCount() == 1)
 	{
-		FormMatrix(this->GetImage(0, 0, 0), mx_dxtimage_rgb, combine_alpha);
+		DXGIPixel matrix_constructor(this->GetMetadata().format, this->GetImage(0, 0, 0));
+		if(combine_alpha)
+		{
+			matrix_constructor.ExtractRGBA(mx_dxtimage_rgb);
+		}
+		else
+		{
+			matrix_constructor.ExtractRGB(mx_dxtimage_rgb);
+		}
 	}
 	else
 	{
+		mxArray* tmp_rgb;
 		DirectX::TexMetadata metadata = this->GetMetadata();
 		size_t depth = metadata.depth;
 		mx_dxtimage_rgb = mxCreateCellMatrix(MAX(metadata.arraySize, metadata.depth), metadata.mipLevels);
+		DXGIPixel matrix_constructor(metadata.format);
 		for(i = 0; i < metadata.mipLevels; i++)
 		{
 			for(j = 0; j < metadata.arraySize; j++)
 			{
 				for(k = 0; k < depth; k++)
 				{
-					FormMatrix(this->GetImage(i, j, k), tmp_rgb, combine_alpha);
+					matrix_constructor.SetImage(this->GetImage(i, j, k));
+					if(combine_alpha)
+					{
+						matrix_constructor.ExtractRGBA(tmp_rgb);
+					}
+					else
+					{
+						matrix_constructor.ExtractRGB(tmp_rgb);
+					}
 					mxSetCell(mx_dxtimage_rgb, this->ComputeIndexMEX(i, j, k), tmp_rgb);
 				}
 			}
@@ -392,28 +399,30 @@ void DXTImage::FormMatrix(mxArray*& mx_dxtimage_rgb, bool combine_alpha)
 	}
 }
 
-void DXTImage::FormMatrix(mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a)
+void DXTImage::ToMatrix(mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a)
 {
-	mxArray* tmp_rgb,* tmp_a;
 	size_t i, j, k;
-	
 	if(this->GetImageCount() == 1)
 	{
-		FormMatrix(this->GetImage(0, 0, 0), mx_dxtimage_rgb, mx_dxtimage_a);
+		DXGIPixel matrix_constructor(this->GetMetadata().format, this->GetImage(0, 0, 0));
+		matrix_constructor.ExtractRGBA(mx_dxtimage_rgb, mx_dxtimage_a);
 	}
 	else
 	{
+		mxArray* tmp_rgb,* tmp_a;
 		DirectX::TexMetadata metadata = this->GetMetadata();
 		size_t depth = metadata.depth;
 		mx_dxtimage_rgb = mxCreateCellMatrix(MAX(metadata.arraySize, metadata.depth), metadata.mipLevels);
 		mx_dxtimage_a = mxCreateCellMatrix(MAX(metadata.arraySize, metadata.depth), metadata.mipLevels);
+		DXGIPixel matrix_constructor(metadata.format);
 		for(i = 0; i < metadata.mipLevels; i++)
 		{
 			for(j = 0; j < metadata.arraySize; j++)
 			{
 				for(k = 0; k < depth; k++)
 				{
-					FormMatrix(this->GetImage(i, j, k), tmp_rgb, tmp_a);
+					matrix_constructor.SetImage(this->GetImage(i, j, k));
+					matrix_constructor.ExtractRGBA(tmp_rgb, tmp_a);
 					mxSetCell(mx_dxtimage_rgb, this->ComputeIndexMEX(i, j, k), tmp_rgb);
 					mxSetCell(mx_dxtimage_a, this->ComputeIndexMEX(i, j, k), tmp_a);
 				}
@@ -426,114 +435,6 @@ void DXTImage::FormMatrix(mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a)
 	}
 }
 
-void DXTImage::FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_dxtimageslice_rgb, bool combine_alpha)
-{
-	size_t i, j, src_idx, dst_idx;
-	if(!DirectX::IsValid(raw_img->format))
-	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidFormatError", "Cannot create matrix from image with invalid format.");
-	}
-	if(DirectX::IsCompressed(raw_img->format))
-	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "CompressedFormatError", "Cannot create matrix from compressed image.");
-	}
-	if(combine_alpha)
-	{
-		// assume 8-bit unsigned normalized sRGB for now
-		mwSize rgb_sz[3] = {raw_img->height, raw_img->width, 4};
-		mx_dxtimageslice_rgb = mxCreateNumericArray(3, rgb_sz, mxUINT8_CLASS, mxREAL);
-		auto r_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb);
-		auto g_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + raw_img->height*raw_img->width;
-		auto b_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + 2*raw_img->height*raw_img->width;
-		auto a_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + 3*raw_img->height*raw_img->width;
-		for(i = 0; i < raw_img->height; i++)
-		{
-			for(j = 0; j < raw_img->width; j++)
-			{
-				dst_idx = i + j*raw_img->height;
-				src_idx = (i*raw_img->width + j)*4;
-				r_data[dst_idx] = raw_img->pixels[src_idx];
-				g_data[dst_idx] = raw_img->pixels[src_idx + 1];
-				b_data[dst_idx] = raw_img->pixels[src_idx + 2];
-				a_data[dst_idx] = raw_img->pixels[src_idx + 3];
-			}
-		}
-	}
-	else
-	{
-		// assume 8-bit unsigned normalized sRGB for now
-		mwSize rgb_sz[3] = {raw_img->height, raw_img->width, 3};
-		mx_dxtimageslice_rgb = mxCreateNumericArray(3, rgb_sz, mxUINT8_CLASS, mxREAL);
-		auto r_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb);
-		auto g_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + raw_img->height*raw_img->width;
-		auto b_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + 2*raw_img->height*raw_img->width;
-		for(i = 0; i < raw_img->height; i++)
-		{
-			for(j = 0; j < raw_img->width; j++)
-			{
-				dst_idx = i + j*raw_img->height;
-				src_idx = (i*raw_img->width + j)*4;
-				r_data[dst_idx] = raw_img->pixels[src_idx];
-				g_data[dst_idx] = raw_img->pixels[src_idx + 1];
-				b_data[dst_idx] = raw_img->pixels[src_idx + 2];
-			}
-		}
-	}
-}
-
-void DXTImage::FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_dxtimageslice_rgb, mxArray*& mx_dxtimageslice_a)
-{
-	size_t i, j, src_idx, dst_idx;
-	if(!DirectX::IsValid(raw_img->format))
-	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidFormatError", "Cannot create matrix from image with invalid format.");
-	}
-	if(DirectX::IsCompressed(raw_img->format))
-	{
-		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "CompressedFormatError", "Cannot create matrix from compressed image.");
-	}
-	// assume 8-bit unsigned normalized sRGB for now
-	mwSize rgb_sz[3] = {raw_img->height, raw_img->width, 3};
-	mx_dxtimageslice_rgb = mxCreateNumericArray(3, rgb_sz, mxUINT8_CLASS, mxREAL);
-	if(DirectX::HasAlpha(raw_img->format))
-	{
-		mx_dxtimageslice_a = mxCreateNumericMatrix(raw_img->height, raw_img->width, mxUINT8_CLASS, mxREAL);
-		auto r_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb);
-		auto g_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + raw_img->height * raw_img->width;
-		auto b_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + 2 * raw_img->height * raw_img->width;
-		auto a_data = (uint8_t*)mxGetData(mx_dxtimageslice_a);
-		for(i = 0; i < raw_img->height; i++)
-		{
-			for(j = 0; j < raw_img->width; j++)
-			{
-				dst_idx = i + j*raw_img->height;
-				src_idx = (i*raw_img->width + j) * 4;
-				r_data[dst_idx] = raw_img->pixels[src_idx];
-				g_data[dst_idx] = raw_img->pixels[src_idx + 1];
-				b_data[dst_idx] = raw_img->pixels[src_idx + 2];
-				a_data[dst_idx] = raw_img->pixels[src_idx + 3];
-			}
-		}
-	}
-	else
-	{
-		mx_dxtimageslice_a = mxCreateNumericMatrix(0, 0, mxUINT8_CLASS, mxREAL);
-		auto r_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb);
-		auto g_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + raw_img->height * raw_img->width;
-		auto b_data = (uint8_t*)mxGetData(mx_dxtimageslice_rgb) + 2 * raw_img->height * raw_img->width;
-		for(i = 0; i < raw_img->height; i++)
-		{
-			for(j = 0; j < raw_img->width; j++)
-			{
-				dst_idx = i + j*raw_img->height;
-				src_idx = (i*raw_img->width + j) * 4;
-				r_data[dst_idx] = raw_img->pixels[src_idx];
-				g_data[dst_idx] = raw_img->pixels[src_idx + 1];
-				b_data[dst_idx] = raw_img->pixels[src_idx + 2];
-			}
-		}
-	}
-}
 
 void DXTImage::WriteHDR(std::wstring &filename, std::wstring &ext, bool remove_idx_if_singular)
 {

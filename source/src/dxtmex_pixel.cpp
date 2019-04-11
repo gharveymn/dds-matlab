@@ -507,6 +507,7 @@ namespace DXTMEX
 				this->_channels[1] = {4,  4, 1, DXGIPixel::UNORM, 'G'};
 				this->_channels[2] = {4,  8, 0, DXGIPixel::UNORM, 'R'};
 				this->_channels[3] = {4, 12, 3, DXGIPixel::UNORM, 'A'};
+				break;
 			}
 			case DXGI_FORMAT_BC1_TYPELESS:               /* COMPRESSED */
 			case DXGI_FORMAT_BC1_UNORM:
@@ -582,36 +583,36 @@ namespace DXTMEX
 				                        "Unsupported format '%s' is not supported for this operation.",
 				                        GetFormatStringFromID(fmt).c_str());
 			}
-			
-			/* check for uniform datatype and width */
-			this->_has_uniform_width = true;
-			this->_has_uniform_datatype = true;
-			for(size_t i = 1; i < this->_num_channels; i++)
-			{
-				if(this->_channels[i].width != this->_channels[0].width)
-				{
-					this->_has_uniform_width = false;
-				}
-				if(this->_channels[i].datatype != this->_channels[0].datatype)
-				{
-					this->_has_uniform_datatype = false;
-				}
-			}
-			
-			/* make sure all channel widths are <= 32 bits wide */
-			/* assumptions are made later which depend on this */
-			for(size_t i = 0; i < this->_num_channels; i++)
-			{
-				if(this->_channels[i].width > 32)
-				{
-					MEXError::PrintMexError(MEU_FL,
-					                        MEU_SEVERITY_INTERNAL,
-					                        "UnexpectedFormatError",
-					                        "A channel was unexpectedly %llu bits wide.", this->_channels[i].width);
-				}
-			}
-			
 		}
+
+		/* check for uniform datatype and width */
+		this->_has_uniform_width = true;
+		this->_has_uniform_datatype = true;
+		for(size_t i = 1; i < this->_num_channels; i++)
+		{
+			if(this->_channels[i].width != this->_channels[0].width)
+			{
+				this->_has_uniform_width = false;
+			}
+			if(this->_channels[i].datatype != this->_channels[0].datatype)
+			{
+				this->_has_uniform_datatype = false;
+			}
+		}
+
+		/* make sure all channel widths are <= 32 bits wide */
+		/* assumptions are made later which depend on this */
+		for(size_t i = 0; i < this->_num_channels; i++)
+		{
+			if(this->_channels[i].width > 32)
+			{
+				MEXError::PrintMexError(MEU_FL,
+								    MEU_SEVERITY_INTERNAL,
+								    "UnexpectedFormatError",
+								    "A channel was unexpectedly %llu bits wide.", this->_channels[i].width);
+			}
+		}
+
 	}
 	
 	void DXGIPixel::ExtractChannels(const size_t* ch_indices, const size_t* out_idx, size_t num_idx, mxArray*&out, mxClassID out_class)
@@ -627,7 +628,7 @@ namespace DXTMEX
 			max_out_idx = (out_idx[i] > max_out_idx)? out_idx[i] : max_out_idx;
 		}
 		
-		const mwSize out_dims[] = {this->_image->height, this->_image->width, max_out_idx};
+		const mwSize out_dims[] = {this->_image->height, this->_image->width, max_out_idx + 1};
 		mwSize ndim = ARRAYSIZE(out_dims);
 		
 		/* check channels requested are inside bounds */
@@ -643,6 +644,28 @@ namespace DXTMEX
 				                        ch_indices[i], this->_num_channels);
 			}
 		}
+		
+		/* check expected image data size */
+		size_t expected_rowpitch;
+		size_t expected_slicepitch;
+		DirectX::ComputePitch(this->_format, this->_image->width, this->_image->height, expected_rowpitch, expected_slicepitch);
+		if(expected_rowpitch != this->_image->rowPitch)
+		{
+			MEXError::PrintMexError(MEU_FL,
+			                        MEU_SEVERITY_INTERNAL,
+			                        "InvalidSizeError",
+			                        "The expected row pitch of the image (%llu) was different than the nominal "
+					              "row pitch (%llu).", expected_rowpitch, this->_image->rowPitch);
+		}
+		if(expected_slicepitch != this->_image->slicePitch)
+		{
+			MEXError::PrintMexError(MEU_FL,
+			                        MEU_SEVERITY_INTERNAL,
+			                        "InvalidSizeError",
+			                        "The expected slice pitch of the image (%llu) was different than the nominal "
+			                        "slice pitch (%llu).", expected_slicepitch, this->_image->slicePitch);
+		}
+		
 		
 		if(this->_has_uniform_datatype)
 		{
@@ -694,9 +717,39 @@ namespace DXTMEX
 			}
 			case DXGIPixel::SHAREDEXP:
 			{
+				/* special case */
 				out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SHAREDEXP, mxUint16>::Store;
-				break;
+#define SHAREDEXP_BIAS 15
+#define SHAREDEXP_R_MASK 0x000001FF
+#define SHAREDEXP_G_MASK 0x0003FE00
+#define SHAREDEXP_B_MASK 0x07FC0000
+#define SHAREDEXP_E_MASK 0xF8000000
+				auto data = (mxSingle*)mxGetData(out);
+				auto pixels = (uint32_t*)this->_image->pixels;
+				uint32_t masks[3] = {SHAREDEXP_R_MASK, SHAREDEXP_G_MASK, SHAREDEXP_B_MASK};
+				for(size_t i = 0; i < num_idx; i++)
+				{
+					if(ch_indices[i]  == 3)
+					{
+						MEXError::PrintMexError(MEU_FL,
+						                        MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL,
+						                        "InvalidChannelError",
+						                        "Selected channel cannot be the exponent for datatype with "
+						                        "a shared exponent.");
+					}
+				}
+				for(size_t i = 0; i < this->_num_pixels(); i++)
+				{
+					uint32_t pixel_data = *(pixels + i);
+					int32_t  unbiased_exp = (int32_t)(pixel_data & SHAREDEXP_E_MASK) - SHAREDEXP_BIAS;
+					float    scalar = std::pow(2, unbiased_exp);
+					for(size_t j = 0; j < num_idx; j++)
+					{
+						mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels();
+						data[dst_idx] = ((pixel_data & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset) * scalar;
+					}
+				}
+				return; // EARLY RETURN
 			}
 			case DXGIPixel::XR_BIAS:
 			{
@@ -706,12 +759,11 @@ namespace DXTMEX
 			}
 			case DXGIPixel::SINT:
 			{
-				/* get max width of selected channels */
-				size_t max_width = 0;
-				for(size_t i = 0; i < num_idx; i++)
-				{
-					max_width = (this->_channels[ch_indices[i]].width > max_width)? this->_channels[ch_indices[i]].width : max_width;
-				}
+				/* Keep max width consistent with max channel width
+				 * even if we don't select the max channel. This is
+				 * so we don't confuse a user with different types
+				 * on the same data. */
+				size_t max_width = DirectX::BitsPerColor(this->_format);
 				
 				/* determine MATLAB class width */
 				if(max_width == 1)
@@ -738,12 +790,7 @@ namespace DXTMEX
 			}
 			case DXGIPixel::UINT:
 			{
-				/* get max width of selected channels */
-				size_t max_width = 0;
-				for(size_t i = 0; i < num_idx; i++)
-				{
-					max_width = (this->_channels[ch_indices[i]].width > max_width)? this->_channels[ch_indices[i]].width : max_width;
-				}
+				size_t max_width = DirectX::BitsPerColor(this->_format);
 				
 				/* determine MATLAB class width */
 				if(max_width == 1)
@@ -770,12 +817,7 @@ namespace DXTMEX
 			}
 			case DXGIPixel::TYPELESS:
 			{
-				/* get max width of selected channels */
-				size_t max_width = 0;
-				for(size_t i = 0; i < num_idx; i++)
-				{
-					max_width = (this->_channels[ch_indices[i]].width > max_width)? this->_channels[ch_indices[i]].width : max_width;
-				}
+				size_t max_width = DirectX::BitsPerColor(this->_format);
 				
 				/* determine MATLAB class width */
 				if(max_width == 1)
@@ -854,12 +896,13 @@ namespace DXTMEX
 						masks[i] =(((uint64_t)1 << this->_channels[i].width) - (uint64_t)1) << this->_channels[i].offset;
 					}
 					
-					for(size_t i = 0; i < this->_num_pixels; i++)
+					for(size_t i = 0; i < this->_num_pixels(); i++)
 					{
+						uint32_t pixel_data = *(pixels + i);
 						for(size_t j = 0; j < num_idx; j++)
 						{
-							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels;
-							auto channel_data = (uint32_t)((*(pixels + i) & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset);
+							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels();
+							auto channel_data = (uint32_t)((pixel_data & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset);
 							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_indices[j]].width);
 						}
 					}
@@ -905,12 +948,13 @@ namespace DXTMEX
 						masks[i] =(((uint32_t)1 << this->_channels[i].width) - (uint32_t)1) << this->_channels[i].offset;
 					}
 					
-					for(size_t i = 0; i < this->_num_pixels; i++)
+					for(size_t i = 0; i < this->_num_pixels(); i++)
 					{
+						uint32_t pixel_data = *(pixels + i);
 						for(size_t j = 0; j < num_idx; j++)
 						{
-							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels;
-							uint32_t channel_data = (*(pixels + i) & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset;
+							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels();
+							uint32_t channel_data = (pixel_data & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset;
 							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_indices[j]].width);
 						}
 					}
@@ -951,12 +995,13 @@ namespace DXTMEX
 						masks[i] = (uint16_t)(((uint16_t)1 << (uint16_t)this->_channels[i].width) - (uint16_t)1) << this->_channels[i].offset;
 					}
 					
-					for(size_t i = 0; i < this->_num_pixels; i++)
+					for(size_t i = 0; i < this->_num_pixels(); i++)
 					{
+						uint32_t pixel_data = *(pixels + i);
 						for(size_t j = 0; j < num_idx; j++)
 						{
-							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels;
-							uint32_t channel_data = (uint16_t)(*(pixels + i) & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset;
+							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels();
+							uint32_t channel_data = (uint16_t)(pixel_data & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset;
 							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_indices[j]].width);
 						}
 					}
@@ -1011,7 +1056,7 @@ namespace DXTMEX
 							uint32_t channel_data = (uint32_t)(page >> (k - 1)) & 1u;
 							for(l = 0; l < num_idx; l++)
 							{
-								mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + out_idx[l] * this->_num_pixels;
+								mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + out_idx[l] * this->_num_pixels();
 								data_l[dst_idx] = channel_data;
 							}
 						}
@@ -1026,7 +1071,7 @@ namespace DXTMEX
 							uint8_t channel_data = (uint8_t)(page >> (k - 1)) & 1u;
 							for(l = 0; l < num_idx; l++)
 							{
-								mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + out_idx[l] * this->_num_pixels;
+								mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + out_idx[l] * this->_num_pixels();
 								data_l[dst_idx] = channel_data;
 							}
 						}
@@ -1038,7 +1083,7 @@ namespace DXTMEX
 						uint8_t channel_data = (uint8_t)(page >> (k - 1)) & 1u;
 						for(l = 0; l < num_idx; l++)
 						{
-							mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + out_idx[l] * this->_num_pixels;
+							mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + out_idx[l] * this->_num_pixels();
 							data_l[dst_idx] = channel_data;
 						}
 					}
@@ -1047,7 +1092,7 @@ namespace DXTMEX
 		}
 	}
 	
-	void DXGIPixel::ExtractRGB(mxArray*& rgb)
+	void DXGIPixel::ExtractRGB(mxArray*& mx_rgb)
 	{
 		size_t ch_indices[MAX_CHANNELS];
 		size_t out_idx[MAX_CHANNELS];
@@ -1055,14 +1100,14 @@ namespace DXTMEX
 		{
 			for(size_t i = 0, j = 0; i < this->_num_channels; i++)
 			{
-				if(this->_channels[i].name != 'a')
+				if(this->_channels[i].name != 'A')
 				{
 					ch_indices[j] = i;
 					out_idx[j] = this->_channels[i].standard_idx;
 					j++;
 				}
 			}
-			this->ExtractChannels(ch_indices, out_idx, this->_num_channels - 1, rgb);
+			this->ExtractChannels(ch_indices, out_idx, this->_num_channels - 1, mx_rgb);
 		}
 		else
 		{
@@ -1071,11 +1116,11 @@ namespace DXTMEX
 				ch_indices[i] = i;
 				out_idx[i] = this->_channels[i].standard_idx;
 			}
-			this->ExtractChannels(ch_indices, out_idx, this->_num_channels, rgb);
+			this->ExtractChannels(ch_indices, out_idx, this->_num_channels, mx_rgb);
 		}
 	}
 	
-	void DXGIPixel::ExtractRGBA(mxArray*& rgba)
+	void DXGIPixel::ExtractRGBA(mxArray*& mx_rgba)
 	{
 		size_t ch_indices[MAX_CHANNELS];
 		size_t out_idx[MAX_CHANNELS];
@@ -1084,10 +1129,10 @@ namespace DXTMEX
 			ch_indices[i] = i;
 			out_idx[i] = this->_channels[i].standard_idx;
 		}
-		this->ExtractChannels(ch_indices, out_idx, this->_num_channels, rgba);
+		this->ExtractChannels(ch_indices, out_idx, this->_num_channels, mx_rgba);
 	}
 	
-	void DXGIPixel::ExtractRGBA(mxArray*& rgb, mxArray*& a)
+	void DXGIPixel::ExtractRGBA(mxArray*& mx_rgb, mxArray*& mx_a)
 	{
 		size_t ch_indices[MAX_CHANNELS];
 		size_t out_idx[MAX_CHANNELS];
@@ -1095,7 +1140,7 @@ namespace DXTMEX
 		{
 			for(size_t i = 0, j = 0; i < this->_num_channels; i++)
 			{
-				if(this->_channels[i].name != 'a')
+				if(this->_channels[i].name != 'A')
 				{
 					ch_indices[j] = i;
 					out_idx[j] = this->_channels[i].standard_idx;
@@ -1103,10 +1148,10 @@ namespace DXTMEX
 				}
 				else
 				{
-					this->ExtractChannels(i, 0, 1, a);
+					this->ExtractChannels(i, 0, 1, mx_a);
 				}
 			}
-			this->ExtractChannels(ch_indices, out_idx, this->_num_channels - 1, rgb);
+			this->ExtractChannels(ch_indices, out_idx, this->_num_channels - 1, mx_rgb);
 		}
 		else
 		{
@@ -1115,8 +1160,8 @@ namespace DXTMEX
 				ch_indices[i] = i;
 				out_idx[i] = this->_channels[i].standard_idx;
 			}
-			this->ExtractChannels(ch_indices, out_idx, this->_num_channels, rgb);
-			a = mxCreateDoubleMatrix(0, 0, mxREAL);
+			this->ExtractChannels(ch_indices, out_idx, this->_num_channels, mx_rgb);
+			mx_a = mxCreateDoubleMatrix(0, 0, mxREAL);
 		}
 	}
 }

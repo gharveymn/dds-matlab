@@ -57,7 +57,7 @@ namespace DXTMEX
 		static bool IsDXTImageImport(const mxArray* in);
 		static bool IsDXTImageSliceImport(const mxArray* in);
 		
-		void ToImage   (mxArray*& mx_dxtimage_rgb);
+		void ToImage   (mxArray*& mx_dxtimage_rgb, bool combine_alpha);
 		void ToImage   (mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a);
 		void ToMatrix  (mxArray*& mx_dxtimage_rgb, bool combine_alpha);
 		void ToMatrix  (mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a);
@@ -77,10 +77,6 @@ namespace DXTMEX
 		void PrepareImages(DXTImage &out);
 		static void ImportMetadata(const mxArray* mx_metadata, DirectX::TexMetadata& metadata);
 		static void ImportImages(const mxArray* mx_images, DirectX::Image* images, size_t array_size, size_t mip_levels, size_t depth, DirectX::TEX_DIMENSION dimension);
-		void FormMatrix(mxArray*& mx_dxtimage_rgb, bool combine_alpha = false);
-		void FormMatrix(mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a);
-		static void FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_dxtimageslice_rgb, bool combine_alpha);
-		static void FormMatrix(const DirectX::Image* raw_img, mxArray*& mx_dxtimageslice_rgb, mxArray*& mx_dxtimageslice_a);
 	};
 	
 	class DXTImageArray

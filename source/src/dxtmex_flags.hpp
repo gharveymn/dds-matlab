@@ -35,7 +35,7 @@ namespace DXTMEX
 			}
 		};
 		
-		int GetNumberOfFlags() {return _size;}
+		size_t GetNumberOfFlags() {return _size;}
 		
 		const char** GetNames() {return _names;}
 		
