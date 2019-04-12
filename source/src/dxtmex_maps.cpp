@@ -467,7 +467,7 @@ namespace DXTMEX
 	{
 		mxArray* flag_struct = mxCreateStructMatrix(1,
 		                                            1,
-		                                            this->GetNumberOfFlags(),
+		                                            (int)this->GetNumberOfFlags(),
 		                                            this->GetNames());
 		for(auto &p : this->GetFlagToNameMap())
 		{

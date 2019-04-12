@@ -48,7 +48,7 @@ function INSTALL
 % 	end
 
 	fprintf('-Compiling dxtmex...')
-	mexflags = [mexflags {'COMPFLAGS="$COMPFLAGS /W3"'}];
+	mexflags = [mexflags {'COMPFLAGS="$COMPFLAGS /W4"'}];
 	% mexflags = [mexflags {'CFLAGS="$CFLAGS -Wall -Werror -Wno-unused-function"'}];
 	mex(mexflags{:} , sources{:})
 	fprintf(' successful.\n')

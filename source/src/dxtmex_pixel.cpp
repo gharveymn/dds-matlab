@@ -795,201 +795,240 @@ namespace DXTMEX
 			}
 		}
 		
-		/* Determine datatype of MATLAB output.
-		 * Try to do this losslessly unless otherwise specified. */
-		switch(input_datatype)
+		if(out_class != mxUNKNOWN_CLASS)
 		{
-			case DXGIPixel::SNORM:
+			switch(out_class)
 			{
-				out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SNORM, mxSingle>::Store;
-				break;
-			}
-			case DXGIPixel::UNORM:
-			{
-				out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UNORM, mxSingle>::Store;
-				break;
-			}
-			case DXGIPixel::FLOAT:
-			{
-				if(this->_format == DXGI_FORMAT_R11G11B10_FLOAT)
+				case mxINT8_CLASS:
+				case mxINT16_CLASS:
+				case mxINT32_CLASS:
+				case mxUINT8_CLASS:
+				case mxUINT16_CLASS:
+				case mxUINT32_CLASS:
+				case mxSINGLE_CLASS:
+				case mxDOUBLE_CLASS:
 				{
-				
+					out = mxCreateNumericArray(ndim, out_dims, out_class, mxREAL);
+					break;
 				}
-				else
+				case mxLOGICAL_CLASS:
+				{
+					out = mxCreateLogicalArray(ndim, out_dims);
+					break;
+				}
+				case mxINT64_CLASS:
+				case mxUINT64_CLASS:
+				{
+					MEXError::PrintMexError(MEU_FL,
+					                        MEU_SEVERITY_USER,
+					                        "InvalidOutputClassError",
+					                        "Invalid output class. 64-bit integers are not supported.");
+				}
+				default:
+				{
+					MEXError::PrintMexError(MEU_FL,
+					                        MEU_SEVERITY_USER,
+					                        "InvalidOutputClassError",
+					                        "Invalid output class (%u)",
+					                        out_class);
+				}
+			}
+			storage_function = DXGIPixel::GetStorageFunction(input_datatype, out_class);
+		}
+		else
+		{
+			/* Determine datatype of MATLAB output.
+			 * Try to do this losslessly unless otherwise specified. */
+			switch(input_datatype)
+			{
+				case DXGIPixel::SNORM:
+				{
+					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SNORM, mxSingle>::Store;
+					break;
+				}
+				case DXGIPixel::UNORM:
+				{
+					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UNORM, mxSingle>::Store;
+					break;
+				}
+				case DXGIPixel::FLOAT:
 				{
 					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
 					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxSingle>::Store;
+					break;
 				}
-				break;
-			}
-			case DXGIPixel::SRGB:
-			{
-				out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SRGB, mxSingle>::Store;
-				break;
-			}
-			case DXGIPixel::SHAREDEXP:
-			{
-				/* special case */
-				
-				if(this->_format != DXGI_FORMAT_R9G9B9E5_SHAREDEXP)
+				case DXGIPixel::SRGB:
 				{
-					MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL, "UnexpectedFormatError", "Unexpected shared exponent format. Cannot continue.");
+					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SRGB, mxSingle>::Store;
+					break;
 				}
-				
-				/* recalculate max output index ignoring indices referring to the shared exponent */
-				max_out_idx = 0;
-				for(size_t i = 0; i < num_idx; i++)
+				case DXGIPixel::SHAREDEXP:
 				{
-					if(ch_indices[i] != 3)
+					/* special case */
+					
+					if(this->_format != DXGI_FORMAT_R9G9B9E5_SHAREDEXP)
 					{
-						max_out_idx = (out_idx[i] > max_out_idx)? out_idx[i] : max_out_idx;
+						MEXError::PrintMexError(MEU_FL,
+						                        MEU_SEVERITY_INTERNAL,
+						                        "UnexpectedFormatError",
+						                        "Unexpected shared exponent format (%u). Cannot continue.",
+						                        this->_format);
 					}
-				}
-				
-				out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-
-				float debiased_exp;
-				auto data = (mxSingle*)mxGetData(out);
-				auto pixels = (uint32_t*)this->_image->pixels;
-				uint32_t masks[3] = {SHAREDEXP_R_MASK, SHAREDEXP_G_MASK, SHAREDEXP_B_MASK};
-				
-				/* NOTES
-				 * This format supports denormalized numbers,
-				 * so if exponent is 0 then use 1 - SHAREDEXP_BIAS.
-				 *
-				 * There is no sign bit.
-				 *
-				 * The mantissa is NOT offset by 1.
-				 */
-				
-				for(size_t i = 0; i < this->_num_pixels(); i++)
-				{
-					uint32_t pixel_data = *(pixels + i);
-					int32_t  exp_bits = (pixel_data & SHAREDEXP_E_MASK) >> 27u;
-					if(exp_bits == 0)
-					{
-						/* this format has denorm support */
-						debiased_exp = 1 - SHAREDEXP_BIAS;
-					}
-					else
-					{
-						debiased_exp = exp_bits - SHAREDEXP_BIAS;
-					}
-					float scalar = std::pow(2.0f, debiased_exp);
-					for(size_t j = 0; j < num_idx; j++)
+					
+					/* recalculate max output index ignoring indices referring to the shared exponent */
+					max_out_idx = 0;
+					for(size_t i = 0; i < num_idx; i++)
 					{
 						if(ch_indices[i] != 3)
 						{
-							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels();
-							data[dst_idx] = ((pixel_data & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset) * scalar;
+							max_out_idx = (out_idx[i] > max_out_idx)? out_idx[i] : max_out_idx;
 						}
 					}
+					
+					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
+					
+					auto data = (mxSingle*)mxGetData(out);
+					auto pixels = (uint32_t*)this->_image->pixels;
+					uint32_t masks[3] = {SHAREDEXP_R_MASK, SHAREDEXP_G_MASK, SHAREDEXP_B_MASK};
+					
+					/* NOTES
+					 * This format supports denormalized numbers,
+					 * so if exponent is 0 then use 1 - SHAREDEXP_BIAS.
+					 *
+					 * There is no sign bit.
+					 *
+					 * The mantissa is NOT offset by 1.
+					 */
+					float scalar;
+					for(size_t i = 0; i < this->_num_pixels(); i++)
+					{
+						uint32_t pixel_data = *(pixels + i);
+						int32_t exp_bits = (pixel_data & SHAREDEXP_E_MASK) >> 27u;
+						if(exp_bits == 0)
+						{
+							/* this format has denorm support */
+							scalar = std::pow(2.0f, 1 - SHAREDEXP_BIAS);
+						}
+						else
+						{
+							scalar = std::pow(2.0f, exp_bits - SHAREDEXP_BIAS);
+						}
+						for(size_t j = 0; j < num_idx; j++)
+						{
+							if(ch_indices[i] != 3)
+							{
+								mwIndex dst_idx = i/this->_image->width + (i%this->_image->width)*this->_image->height + out_idx[j]*this->_num_pixels();
+								data[dst_idx] = ((pixel_data & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset)*scalar;
+							}
+						}
+					}
+					return; // EARLY RETURN
 				}
-				return; // EARLY RETURN
-			}
-			case DXGIPixel::XR_BIAS:
-			{
-				out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-				storage_function = &DXGIPixel::ChannelElement<DXGIPixel::XR_BIAS, mxSingle>::Store;
-				break;
-			}
-			case DXGIPixel::SINT:
-			{
-				/* Keep max width consistent with max channel width
-				 * even if we don't select the max channel. This is
-				 * so we don't confuse a user with different types
-				 * on the same data. */
-				size_t max_width = DirectX::BitsPerColor(this->_format);
-				
-				/* determine MATLAB class width */
-				if(max_width == 1)
+				case DXGIPixel::XR_BIAS:
 				{
-					out = mxCreateLogicalArray(ndim, out_dims);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxLogical>::Store;
+					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::XR_BIAS, mxSingle>::Store;
+					break;
 				}
-				else if(max_width <= 8)
+				case DXGIPixel::SINT:
 				{
-					out = mxCreateNumericArray(ndim, out_dims, mxINT8_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt8>::Store;
+					/* Keep max width consistent with max channel width
+					 * even if we don't select the max channel. This is
+					 * so we don't confuse a user with different types
+					 * on the same data. */
+					size_t max_width = DirectX::BitsPerColor(this->_format);
+					
+					/* determine MATLAB class width */
+					if(max_width == 1)
+					{
+						out = mxCreateLogicalArray(ndim, out_dims);
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxLogical>::Store;
+					}
+					else if(max_width <= 8)
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxINT8_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt8>::Store;
+					}
+					else if(max_width <= 16)
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxINT16_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt16>::Store;
+					}
+					else
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxINT32_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt32>::Store;
+					}
+					break;
 				}
-				else if(max_width <= 16)
+				case DXGIPixel::UINT:
 				{
-					out = mxCreateNumericArray(ndim, out_dims, mxINT16_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt16>::Store;
+					size_t max_width = DirectX::BitsPerColor(this->_format);
+					
+					/* determine MATLAB class width */
+					if(max_width == 1)
+					{
+						out = mxCreateLogicalArray(ndim, out_dims);
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxLogical>::Store;
+					}
+					else if(max_width <= 8)
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxUINT8_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint8>::Store;
+					}
+					else if(max_width <= 16)
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxUINT16_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint16>::Store;
+					}
+					else
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxUINT32_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint32>::Store;
+					}
+					break;
 				}
-				else
+				case DXGIPixel::TYPELESS:
 				{
-					out = mxCreateNumericArray(ndim, out_dims, mxINT32_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt32>::Store;
+					size_t max_width = DirectX::BitsPerColor(this->_format);
+					
+					/* determine MATLAB class width */
+					if(max_width == 1)
+					{
+						out = mxCreateLogicalArray(ndim, out_dims);
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxLogical>::Store;
+					}
+					else if(max_width <= 8)
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxUINT8_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint8>::Store;
+					}
+					else if(max_width <= 16)
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxUINT16_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint16>::Store;
+					}
+					else
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxUINT32_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint32>::Store;
+					}
+					break;
 				}
-				break;
-			}
-			case DXGIPixel::UINT:
-			{
-				size_t max_width = DirectX::BitsPerColor(this->_format);
-				
-				/* determine MATLAB class width */
-				if(max_width == 1)
+				default:
 				{
-					out = mxCreateLogicalArray(ndim, out_dims);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxLogical>::Store;
+					/* must have uniform type */
+					MEXError::PrintMexError(MEU_FL,
+					                        MEU_SEVERITY_USER,
+					                        "IncompatibleDatatypesError",
+					                        "The datatypes of the format must be uniform to output to a single matrix.");
 				}
-				else if(max_width <= 8)
-				{
-					out = mxCreateNumericArray(ndim, out_dims, mxUINT8_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint8>::Store;
-				}
-				else if(max_width <= 16)
-				{
-					out = mxCreateNumericArray(ndim, out_dims, mxUINT16_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint16>::Store;
-				}
-				else
-				{
-					out = mxCreateNumericArray(ndim, out_dims, mxUINT32_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint32>::Store;
-				}
-				break;
-			}
-			case DXGIPixel::TYPELESS:
-			{
-				size_t max_width = DirectX::BitsPerColor(this->_format);
-				
-				/* determine MATLAB class width */
-				if(max_width == 1)
-				{
-					out = mxCreateLogicalArray(ndim, out_dims);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxLogical>::Store;
-				}
-				else if(max_width <= 8)
-				{
-					out = mxCreateNumericArray(ndim, out_dims, mxUINT8_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint8>::Store;
-				}
-				else if(max_width <= 16)
-				{
-					out = mxCreateNumericArray(ndim, out_dims, mxUINT16_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint16>::Store;
-				}
-				else
-				{
-					out = mxCreateNumericArray(ndim, out_dims, mxUINT32_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint32>::Store;
-				}
-				break;
-			}
-			default:
-			{
-				/* must have uniform type */
-				MEXError::PrintMexError(MEU_FL,
-				                        MEU_SEVERITY_USER,
-				                        "IncompatibleDatatypesError",
-				                        "The datatypes of the format must be uniform to output to a single matrix.");
 			}
 		}
+		
 		
 		void* data = mxGetData(out);
 		switch(this->_pixel_width)
@@ -1037,7 +1076,7 @@ namespace DXTMEX
 					
 					for(size_t i = 0; i < this->_num_pixels(); i++)
 					{
-						uint32_t pixel_data = *(pixels + i);
+						uint64_t pixel_data = *(pixels + i);
 						for(size_t j = 0; j < num_idx; j++)
 						{
 							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels();
@@ -1287,7 +1326,7 @@ namespace DXTMEX
 				}
 				else
 				{
-					this->ExtractChannels(i, 0, 1, mx_a);
+					this->ExtractChannels(i, 0, mx_a);
 				}
 			}
 			this->ExtractChannels(ch_indices, out_idx, this->_num_channels - 1, mx_rgb);
@@ -1303,5 +1342,52 @@ namespace DXTMEX
 			mx_a = mxCreateDoubleMatrix(0, 0, mxREAL);
 		}
 	}
+	
+	DXGIPixel::StorageFunction DXGIPixel::GetStorageFunction(const DXGIPixel::DATATYPE in_type, mxClassID out_type)
+	{
+#define STORAGE_FUNCTION_SWITCH(IN_TYPE, OUT_TYPE) \
+switch(OUT_TYPE) \
+{ \
+	case mxINT8_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE,  mxInt8>::Store;            \
+	case mxINT16_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxInt16>::Store;           \
+	case mxINT32_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxInt32>::Store;           \
+	case mxUINT8_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxUint8>::Store;           \
+	case mxUINT16_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxUint16>::Store;         \
+	case mxUINT32_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxUint32>::Store;         \
+	case mxSINGLE_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxSingle>::Store;         \
+	case mxDOUBLE_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxDouble>::Store;         \
+	case mxLOGICAL_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxLogical>::Store;       \
+	default:                                                                                  \
+	{                                                                                         \
+		MEXError::PrintMexError(MEU_FL,                                                      \
+						    MEU_SEVERITY_INTERNAL,                                       \
+						    "UnexpectedOutputTypeError",                                 \
+						    "Unexpected datatype requested for output (%u).",            \
+						    OUT_TYPE);                                                   \
+	}                                                                                         \
+}
+		switch(in_type)
+		{
+			case DXGIPixel::TYPELESS:  STORAGE_FUNCTION_SWITCH(DXGIPixel::TYPELESS, out_type)
+			case DXGIPixel::SNORM:     STORAGE_FUNCTION_SWITCH(DXGIPixel::SNORM, out_type)
+			case DXGIPixel::UNORM:     STORAGE_FUNCTION_SWITCH(DXGIPixel::UNORM, out_type)
+			case DXGIPixel::SINT:      STORAGE_FUNCTION_SWITCH(DXGIPixel::SINT, out_type)
+			case DXGIPixel::UINT:      STORAGE_FUNCTION_SWITCH(DXGIPixel::UINT, out_type)
+			case DXGIPixel::FLOAT:     STORAGE_FUNCTION_SWITCH(DXGIPixel::FLOAT, out_type)
+			case DXGIPixel::SRGB:      STORAGE_FUNCTION_SWITCH(DXGIPixel::SRGB, out_type)
+			case DXGIPixel::SHAREDEXP: STORAGE_FUNCTION_SWITCH(DXGIPixel::SHAREDEXP, out_type)
+			case DXGIPixel::XR_BIAS:   STORAGE_FUNCTION_SWITCH(DXGIPixel::XR_BIAS, out_type)
+			default:
+			{
+				MEXError::PrintMexError(MEU_FL,
+								    MEU_SEVERITY_INTERNAL,
+								    "UnexpectedInputTypeError",
+								    "Unexpected input datatype (%u).",
+								    in_type);
+			}
+		}
+		return nullptr;
+	}
+	
 }
 

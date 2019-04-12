@@ -81,7 +81,7 @@ namespace DXTMEX
 		}
 		
 		void ExtractChannels(const size_t* ch_idx, const size_t* out_idx, size_t num_idx, mxArray*& out, mxClassID out_class = mxUNKNOWN_CLASS);
-		inline void ExtractChannels(size_t ch_idx, size_t out_idx, size_t num_idx, mxArray*& out, mxClassID out_class = mxUNKNOWN_CLASS)
+		inline void ExtractChannels(size_t ch_idx, size_t out_idx,  mxArray*& out, mxClassID out_class = mxUNKNOWN_CLASS)
 		{
 			const size_t ch_idx_arr[1]  = {ch_idx};
 			const size_t out_idx_arr[1] = {out_idx};
@@ -111,18 +111,18 @@ namespace DXTMEX
 		bool                    _has_uniform_datatype;
 		bool                    _has_uniform_width;
 		
-		/* only for signed to signed */
+		/* handles signed to signed and signed to unsigned */
 		template <typename T>
-		constexpr static inline typename std::enable_if<std::is_signed<T>::value, T>::type SaturateCast(int32_t ir)
+		constexpr static inline T SaturateCast(int32_t ir)
 		{
-			return (ir < (std::numeric_limits<T>::min)())? (std::numeric_limits<T>::min)() : (((std::numeric_limits<T>::max)() < ir) ?  (std::numeric_limits<T>::max)() : ir);
+			return (ir < (int64_t)(std::numeric_limits<T>::min)())? (std::numeric_limits<T>::min)() : (((int64_t)(std::numeric_limits<T>::max)() < ir) ?  (std::numeric_limits<T>::max)() : (T)ir);
 		}
 		
-		/* only for unsigned to unsigned */
+		/* handles unsigned to unsigned and unsigned to signed */
 		template <typename T>
-		constexpr static inline typename std::enable_if<std::is_unsigned<T>::value, T>::type SaturateCast(uint32_t ir)
+		constexpr static inline T SaturateCast(uint32_t ir)
 		{
-			return ((std::numeric_limits<T>::max)() < ir)? (std::numeric_limits<T>::max)() : (T)ir;
+			return ((uint64_t)(std::numeric_limits<T>::max)() < ir)? (std::numeric_limits<T>::max)() : (T)ir;
 		}
 		
 		static inline int32_t SignExtend(uint32_t ir, const uint32_t num_bits)
@@ -133,272 +133,12 @@ namespace DXTMEX
 		}
 		
 		typedef void (*StorageFunction)(void*, mwIndex, uint32_t, uint32_t);
+		static StorageFunction GetStorageFunction(DXGIPixel::DATATYPE in_type, mxClassID out_type);
 		
 		template <DXGIPixel::DATATYPE, typename, class enable = void>
 		struct ChannelElement;
 		
-		template <typename T>
-		struct ChannelElement<DXGIPixel::TYPELESS, T>
-		{
-			static constexpr size_t cpy_sz = sizeof(T) < sizeof(uint32_t)? sizeof(T) : sizeof(uint32_t);
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
-			{
-				memcpy((T*)data + dst_idx, &ir, cpy_sz);
-			}
-		};
 		
-		/* SNORM conversions */
-		template <typename T>
-		struct ChannelElement<DXGIPixel::SNORM, T, typename std::enable_if<std::is_floating_point<T>::value>::type>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
-			{
-				uint32_t MSB = (uint32_t)1 << (num_bits - 1);
-				if(ir == MSB)
-				{
-					((T*)data)[dst_idx] = -1.0f;
-					return;
-				}
-				auto c = (float)DXGIPixel::SignExtend(ir, num_bits);
-				((T*)data)[dst_idx] = c/(MSB - 1);
-			}
-		};
-		
-		/* UNORM conversions */
-		template <typename T>
-		struct ChannelElement<DXGIPixel::UNORM, T, typename std::enable_if<std::is_unsigned<T>::value>::type>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
-			{
-				/* don't renormalize so we can get the original data in MATLAB */
-				((T*)data)[dst_idx] = SaturateCast<T>(ir);
-			}
-		};
-		
-		template <typename T>
-		struct ChannelElement<DXGIPixel::UNORM, T, typename std::enable_if<std::is_signed<T>::value>::type>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
-			{
-				/* don't renormalize so we can get the original data in MATLAB */
-				((T*)data)[dst_idx] = SaturateCast<T>(SignExtend(ir, num_bits));
-			}
-		};
-		
-		template <typename T>
-		struct ChannelElement<DXGIPixel::UNORM, T, typename std::enable_if<std::is_floating_point<T>::value>::type>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
-			{
-				/* converted to FLOAT */
-				((T*)data)[dst_idx] = (T)ir/((1u << num_bits) - 1);
-			}
-		};
-		
-		/* SINT conversions */
-		template <typename T>
-		struct ChannelElement<DXGIPixel::SINT, T>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits)
-			{
-				((T*)data)[dst_idx] = DXGIPixel::SignExtend<T>(ir, num_bits);
-			}
-		};
-		
-		/* UINT conversions */
-		template <typename T>
-		struct ChannelElement<DXGIPixel::UINT, T>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits)
-			{
-				((T*)data)[dst_idx] = (T)ir;
-			}
-		};
-		
-		/* FLOAT conversions */
-		template <>
-		struct ChannelElement<DXGIPixel::FLOAT, mxSingle>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
-			{
-				((mxSingle*)data)[dst_idx] = (num_bits == 32)? (mxSingle)*((float*)&ir) : GetFloat(ir, num_bits);
-			}
-			
-			static float GetFloat(uint32_t ir, uint32_t num_bits)
-			{
-				switch(num_bits)
-				{
-					/* all cases below have 1 added to mantissa if exp is not zero and support denorms */
-					case 16:
-					{
-						
-						float c;
-						int32_t exp_bits = (ir & FLOAT16_E_MASK) >> 10u;
-						if(exp_bits == 0)
-						{
-							/* this format has denorm support */
-							c = (float)(ir & FLOAT16_M_MASK) * std::pow(2.0f, 1 - FLOAT16_BIAS);
-						}
-						else
-						{
-							c = ((float)(ir & FLOAT16_M_MASK) + 1.0f) * std::pow(2.0f, exp_bits - FLOAT16_BIAS);
-						}
-						return (ir & FLOAT16_S_MASK)? -c : c;
-					}
-					/* no sign bit for cases below */
-					case 11:
-					{
-						
-						int32_t exp_bits = (ir & FLOAT11_E_MASK) >> 10u;
-						if(exp_bits == 0)
-						{
-							/* this format has denorm support */
-							return (float)(ir & FLOAT11_M_MASK) * std::pow(2.0f, 1 - FLOAT11_BIAS);
-						}
-						else
-						{
-							return ((float)(ir & FLOAT11_M_MASK) + 1.0f) * std::pow(2.0f, exp_bits - FLOAT11_BIAS);
-						}
-					}
-					case 10:
-					{
-						
-						int32_t exp_bits = (ir & FLOAT10_E_MASK) >> 10u;
-						if(exp_bits == 0)
-						{
-							/* this format has denorm support */
-							return (float)(ir & FLOAT10_M_MASK) * std::pow(2.0f, 1 - FLOAT10_BIAS);
-						}
-						else
-						{
-							return ((float)(ir & FLOAT10_M_MASK) + 1.0f) * std::pow(2.0f, exp_bits - FLOAT10_BIAS);
-						}
-					}
-					default:
-					{
-						MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL, "UnexpectedFormatError", "Unexpected floating point format had a channel with %lu bits.", num_bits);
-					}
-				}
-				return 0.0f;
-			}
-		};
-		
-		template <>
-		struct ChannelElement<DXGIPixel::FLOAT, mxDouble>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
-			{
-				((mxDouble*)data)[dst_idx] = (num_bits == 32)? (mxDouble)*((float*)&ir) : GetDouble(ir, num_bits);
-			}
-			
-			static double GetDouble(uint32_t ir, uint32_t num_bits)
-			{
-				switch(num_bits)
-				{
-					/* all cases below have 1 added to mantissa if exp is not zero and support denorms */
-					case 16:
-					{
-						double c;
-						int32_t exp_bits = (ir & FLOAT16_E_MASK) >> 10u;
-						if(exp_bits == 0)
-						{
-							/* this format has denorm support */
-							c = (double)(ir & FLOAT16_M_MASK) * std::pow(2.0, 1 - FLOAT16_BIAS);
-						}
-						else
-						{
-							c = ((double)(ir & FLOAT16_M_MASK) + 1.0) * std::pow(2.0, exp_bits - FLOAT16_BIAS);
-						}
-						return (ir & FLOAT16_S_MASK)? -c : c;
-					}
-						/* no sign bit for cases below */
-					case 11:
-					{
-						int32_t exp_bits = (ir & FLOAT11_E_MASK) >> 10u;
-						if(exp_bits == 0)
-						{
-							/* this format has denorm support */
-							return (double)(ir & FLOAT11_M_MASK) * std::pow(2.0, 1 - FLOAT11_BIAS);
-						}
-						else
-						{
-							return ((double)(ir & FLOAT11_M_MASK) + 1.0) * std::pow(2.0, exp_bits - FLOAT11_BIAS);
-						}
-						break;
-					}
-					case 10:
-					{
-						int32_t exp_bits = (ir & FLOAT10_E_MASK) >> 10u;
-						if(exp_bits == 0)
-						{
-							/* this format has denorm support */
-							return (double)(ir & FLOAT10_M_MASK) * std::pow(2.0, 1 - FLOAT10_BIAS);
-						}
-						else
-						{
-							return ((double)(ir & FLOAT10_M_MASK) + 1.0) * std::pow(2.0, exp_bits - FLOAT10_BIAS);
-						}
-						break;
-					}
-					default:
-					{
-						MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL, "UnexpectedFormatError", "Unexpected floating point format had a channel with %lu bits.", num_bits);
-					}
-				}
-				return 0.0;
-			}
-		};
-		
-		template <typename T>
-		struct ChannelElement<DXGIPixel::FLOAT, T>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
-			{
-				((T*)data)[dst_idx] = (num_bits == 32)? (T)ir : (T)ChannelElement<DXGIPixel::FLOAT, mxSingle>::GetFloat(ir, num_bits);
-			}
-		};
-		
-		/* SRGB conversions */
-		
-		/* Don't use SRGB to FLOAT conversion because the MATLAB float representation
-		 * is actually just a linear map to SRGB. Treat this as UNORM. */
-		template <typename T>
-		struct ChannelElement<DXGIPixel::SRGB, T>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 8)
-			{
-				ChannelElement<DXGIPixel::UNORM, T>::Store(data, dst_idx, ir, num_bits);
-			}
-		};
-		
-		/* SHAREDEXP conversions */
-		template <typename T>
-		struct ChannelElement<DXGIPixel::SHAREDEXP, T>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 16)
-			{
-				ChannelElement<DXGIPixel::UNORM, T>::Store(data, dst_idx, ir, num_bits);
-			}
-		};
-		
-		/* XR_BIAS conversions */
-		template <>
-		struct ChannelElement<DXGIPixel::XR_BIAS, mxSingle>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
-			{
-				((mxSingle*)data)[dst_idx] = (float)((ir & 0x3FFu) - 0x180) / 510.0f;
-			}
-		};
-		
-		template <>
-		struct ChannelElement<DXGIPixel::XR_BIAS, mxDouble>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
-			{
-				((mxDouble*)data)[dst_idx] = (double)(((ir & 0x3FFu) - 0x180) / 510.0f);
-			}
-		};
 		
 		void SetChannels(DXGI_FORMAT);
 		
@@ -417,5 +157,297 @@ namespace DXTMEX
 			}
 		}
 	};
+	
+	template <>
+	constexpr mxLogical DXGIPixel::SaturateCast<mxLogical>(int32_t ir)
+	{
+		return ir != 0;
+	}
+	
+	template <>
+	constexpr mxLogical DXGIPixel::SaturateCast<mxLogical>(uint32_t ir)
+	{
+		return ir != 0;
+	}
+	
+	
+	/* TYPELESS conversions (these are just memcpys) */
+	template <typename T>
+	struct DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, T>
+	{
+		static constexpr size_t cpy_sz = sizeof(T) < sizeof(uint32_t)? sizeof(T) : sizeof(uint32_t);
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		{
+			memcpy((T*)data + dst_idx, &ir, cpy_sz);
+		}
+	};
+	
+	/* SNORM conversions */
+	
+	/* to integral type */
+	template <typename T>
+	struct DXGIPixel::ChannelElement<DXGIPixel::SNORM, T, typename std::enable_if<std::is_integral<T>::value>::type>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		{
+			((T*)data)[dst_idx] = SaturateCast<T>(SignExtend(ir, num_bits));
+		}
+	};
+	
+	/* to floating point */
+	/* NATURAL CONVERSION */
+	template <typename T>
+	struct DXGIPixel::ChannelElement<DXGIPixel::SNORM, T, typename std::enable_if<std::is_floating_point<T>::value>::type>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		{
+			uint32_t MSB = (uint32_t)1 << (num_bits - 1);
+			if(ir == MSB)
+			{
+				((T*)data)[dst_idx] = -1.0f;
+				return;
+			}
+			auto c = (float)SignExtend(ir, num_bits);
+			((T*)data)[dst_idx] = c/(MSB - 1);
+		}
+	};
+	
+	/* UNORM conversions */
+	
+	/* to integral type */
+	template <typename T>
+	struct DXGIPixel::ChannelElement<DXGIPixel::UNORM, T, typename std::enable_if<std::is_integral<T>::value>::type>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		{
+			/* don't renormalize so we can get the original data in MATLAB */
+			((T*)data)[dst_idx] = SaturateCast<T>(ir);
+		}
+	};
+	
+	/* to floating point */
+	/* NATURAL CONVERSION */
+	template <typename T>
+	struct DXGIPixel::ChannelElement<DXGIPixel::UNORM, T, typename std::enable_if<std::is_floating_point<T>::value>::type>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		{
+			/* converted to FLOAT */
+			((T*)data)[dst_idx] = (T)ir/((1u << num_bits) - 1);
+		}
+	};
+	
+	/* SINT conversions */
+	/* NATURAL CONVERSION */
+	template <typename T>
+	struct DXGIPixel::ChannelElement<DXGIPixel::SINT, T>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits)
+		{
+			((T*)data)[dst_idx] = SaturateCast<T>(SignExtend(ir, num_bits));
+		}
+	};
+	
+	/* UINT conversions */
+	/* NATURAL CONVERSION */
+	template <typename T>
+	struct DXGIPixel::ChannelElement<DXGIPixel::UINT, T>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits)
+		{
+			((T*)data)[dst_idx] = SaturateCast<T>(ir);
+		}
+	};
+	
+	/* FLOAT conversions */
+	/* NATURAL CONVERSION */
+	template <>
+	struct DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxSingle>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		{
+			((mxSingle*)data)[dst_idx] = (num_bits == 32)? (mxSingle)*((float*)&ir) : GetFloat(ir, num_bits);
+		}
+		
+		static float GetFloat(uint32_t ir, uint32_t num_bits)
+		{
+			switch(num_bits)
+			{
+				/* all cases below have 1 added to mantissa if exp is not zero and support denorms */
+				case 16:
+				{
+					
+					float c;
+					int32_t exp_bits = (ir & FLOAT16_E_MASK) >> 10u;
+					if(exp_bits == 0)
+					{
+						/* this format has denorm support */
+						c = (float)(ir & FLOAT16_M_MASK) * std::pow(2.0f, 1 - FLOAT16_BIAS);
+					}
+					else
+					{
+						c = ((float)(ir & FLOAT16_M_MASK) + 1.0f) * std::pow(2.0f, exp_bits - FLOAT16_BIAS);
+					}
+					return (ir & FLOAT16_S_MASK)? -c : c;
+				}
+					/* no sign bit for cases below */
+				case 11:
+				{
+					
+					int32_t exp_bits = (ir & FLOAT11_E_MASK) >> 10u;
+					if(exp_bits == 0)
+					{
+						/* this format has denorm support */
+						return (float)(ir & FLOAT11_M_MASK) * std::pow(2.0f, 1 - FLOAT11_BIAS);
+					}
+					else
+					{
+						return ((float)(ir & FLOAT11_M_MASK) + 1.0f) * std::pow(2.0f, exp_bits - FLOAT11_BIAS);
+					}
+				}
+				case 10:
+				{
+					
+					int32_t exp_bits = (ir & FLOAT10_E_MASK) >> 10u;
+					if(exp_bits == 0)
+					{
+						/* this format has denorm support */
+						return (float)(ir & FLOAT10_M_MASK) * std::pow(2.0f, 1 - FLOAT10_BIAS);
+					}
+					else
+					{
+						return ((float)(ir & FLOAT10_M_MASK) + 1.0f) * std::pow(2.0f, exp_bits - FLOAT10_BIAS);
+					}
+				}
+				default:
+				{
+					MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL, "UnexpectedFormatError", "Unexpected floating point format had a channel with %lu bits.", num_bits);
+				}
+			}
+			return 0.0f;
+		}
+	};
+	
+	template <>
+	struct DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxDouble>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		{
+			((mxDouble*)data)[dst_idx] = (num_bits == 32)? (mxDouble)*((float*)&ir) : GetDouble(ir, num_bits);
+		}
+		
+		static double GetDouble(uint32_t ir, uint32_t num_bits)
+		{
+			switch(num_bits)
+			{
+				/* all cases below have 1 added to mantissa if exp is not zero and support denorms */
+				case 16:
+				{
+					double c;
+					int32_t exp_bits = (ir & FLOAT16_E_MASK) >> 10u;
+					if(exp_bits == 0)
+					{
+						/* this format has denorm support */
+						c = (double)(ir & FLOAT16_M_MASK) * std::pow(2.0, 1 - FLOAT16_BIAS);
+					}
+					else
+					{
+						c = ((double)(ir & FLOAT16_M_MASK) + 1.0) * std::pow(2.0, exp_bits - FLOAT16_BIAS);
+					}
+					return (ir & FLOAT16_S_MASK)? -c : c;
+				}
+					/* no sign bit for cases below */
+				case 11:
+				{
+					int32_t exp_bits = (ir & FLOAT11_E_MASK) >> 10u;
+					if(exp_bits == 0)
+					{
+						/* this format has denorm support */
+						return (double)(ir & FLOAT11_M_MASK) * std::pow(2.0, 1 - FLOAT11_BIAS);
+					}
+					else
+					{
+						return ((double)(ir & FLOAT11_M_MASK) + 1.0) * std::pow(2.0, exp_bits - FLOAT11_BIAS);
+					}
+					break;
+				}
+				case 10:
+				{
+					int32_t exp_bits = (ir & FLOAT10_E_MASK) >> 10u;
+					if(exp_bits == 0)
+					{
+						/* this format has denorm support */
+						return (double)(ir & FLOAT10_M_MASK) * std::pow(2.0, 1 - FLOAT10_BIAS);
+					}
+					else
+					{
+						return ((double)(ir & FLOAT10_M_MASK) + 1.0) * std::pow(2.0, exp_bits - FLOAT10_BIAS);
+					}
+					break;
+				}
+				default:
+				{
+					MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL, "UnexpectedFormatError", "Unexpected floating point format had a channel with %lu bits.", num_bits);
+				}
+			}
+			return 0.0;
+		}
+	};
+	
+	template <typename T>
+	struct DXGIPixel::ChannelElement<DXGIPixel::FLOAT, T>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		{
+			((T*)data)[dst_idx] = (num_bits == 32)? (T)ir : (T)DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxSingle>::GetFloat(ir, num_bits);
+		}
+	};
+	
+	/* SRGB conversions */
+	
+	/* Don't use SRGB to FLOAT conversion because the MATLAB float representation
+	 * is actually just a linear map to SRGB. Treat this as UNORM. */
+	template <typename T>
+	struct DXGIPixel::ChannelElement<DXGIPixel::SRGB, T>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 8)
+		{
+			DXGIPixel::ChannelElement<DXGIPixel::UNORM, T>::Store(data, dst_idx, ir, num_bits);
+		}
+	};
+	
+	/* SHAREDEXP conversions */
+	/* RAW DATA CONVERSION */
+	template <typename T>
+	struct DXGIPixel::ChannelElement<DXGIPixel::SHAREDEXP, T>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 16)
+		{
+			DXGIPixel::ChannelElement<DXGIPixel::UINT, T>::Store(data, dst_idx, ir, num_bits);
+		}
+	};
+	
+	/* XR_BIAS conversions */
+	/* NATURAL CONVERSION */
+	template <typename T>
+	struct DXGIPixel::ChannelElement<DXGIPixel::XR_BIAS, T, typename std::enable_if<std::is_floating_point<T>::value>::type>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		{
+			((T*)data)[dst_idx] = (T)((ir & 0x3FFu) - 0x180) / 510.0f;
+		}
+	};
+	
+	/* RAW DATA CONVERSION */
+	template <typename T>
+	struct DXGIPixel::ChannelElement<DXGIPixel::XR_BIAS, T, typename std::enable_if<std::is_integral<T>::value>::type>
+	{
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		{
+			DXGIPixel::ChannelElement<DXGIPixel::UINT, T>::Store(data, dst_idx, ir, num_bits);
+		}
+	};
+	
+	
 }
 
