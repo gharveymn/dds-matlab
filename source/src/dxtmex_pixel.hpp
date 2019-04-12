@@ -92,7 +92,6 @@ namespace DXTMEX
 		void ExtractRGBA(mxArray*& mx_rgba);
 		void ExtractRGBA(mxArray*& mx_rgb, mxArray*& mx_a);
 		
-		
 	private:
 		
 		struct PixelChannel
@@ -112,62 +111,87 @@ namespace DXTMEX
 		bool                    _has_uniform_datatype;
 		bool                    _has_uniform_width;
 		
+		/* only for signed to signed */
 		template <typename T>
-		static inline T SignExtend(uint32_t ir, const uint32_t num_bits)
+		constexpr static inline typename std::enable_if<std::is_signed<T>::value, T>::type SaturateCast(int32_t ir)
+		{
+			return (ir < (std::numeric_limits<T>::min)())? (std::numeric_limits<T>::min)() : (((std::numeric_limits<T>::max)() < ir) ?  (std::numeric_limits<T>::max)() : ir);
+		}
+		
+		/* only for unsigned to unsigned */
+		template <typename T>
+		constexpr static inline typename std::enable_if<std::is_unsigned<T>::value, T>::type SaturateCast(uint32_t ir)
+		{
+			return ((std::numeric_limits<T>::max)() < ir)? (std::numeric_limits<T>::max)() : (T)ir;
+		}
+		
+		static inline int32_t SignExtend(uint32_t ir, const uint32_t num_bits)
 		{
 			uint32_t mask = (uint32_t)1 << (num_bits - 1);
-			return (T)((ir ^ mask) - mask);
+			uint32_t extended = (ir ^ mask) - mask;
+			return *(int32_t*)&extended;
 		}
 		
 		typedef void (*StorageFunction)(void*, mwIndex, uint32_t, uint32_t);
 		
-		template <DXGIPixel::DATATYPE, typename>
+		template <DXGIPixel::DATATYPE, typename, class enable = void>
 		struct ChannelElement;
 		
 		template <typename T>
 		struct ChannelElement<DXGIPixel::TYPELESS, T>
 		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 0)
+			static constexpr size_t cpy_sz = sizeof(T) < sizeof(uint32_t)? sizeof(T) : sizeof(uint32_t);
+			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 			{
-				/* in the narrowing case this isn't portable */
-				((T*)data)[dst_idx] = *((T*)&ir);
-			}
-		};
-		
-		template <>
-		struct ChannelElement<DXGIPixel::TYPELESS, mxDouble>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 0)
-			{
-				/* make sure we don't go over 32-bit width */
-				((mxDouble*)data)[dst_idx] = (mxDouble)*((float*)&ir);
+				memcpy((T*)data + dst_idx, &ir, cpy_sz);
 			}
 		};
 		
 		/* SNORM conversions */
-		template <>
-		struct ChannelElement<DXGIPixel::SNORM, mxSingle>
+		template <typename T>
+		struct ChannelElement<DXGIPixel::SNORM, T, typename std::enable_if<std::is_floating_point<T>::value>::type>
 		{
 			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 			{
 				uint32_t MSB = (uint32_t)1 << (num_bits - 1);
 				if(ir == MSB)
 				{
-					((mxSingle*)data)[dst_idx] = -1.0f;
+					((T*)data)[dst_idx] = -1.0f;
 					return;
 				}
-				auto c = DXGIPixel::SignExtend<mxSingle>(ir, num_bits);
-				((mxSingle*)data)[dst_idx] = c/(MSB - 1);
+				auto c = (float)DXGIPixel::SignExtend(ir, num_bits);
+				((T*)data)[dst_idx] = c/(MSB - 1);
 			}
 		};
 		
 		/* UNORM conversions */
-		template <>
-		struct ChannelElement<DXGIPixel::UNORM, mxSingle>
+		template <typename T>
+		struct ChannelElement<DXGIPixel::UNORM, T, typename std::enable_if<std::is_unsigned<T>::value>::type>
 		{
 			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 			{
-				((mxSingle*)data)[dst_idx] = (mxSingle)ir/(((uint32_t)1 << num_bits) - 1);
+				/* don't renormalize so we can get the original data in MATLAB */
+				((T*)data)[dst_idx] = SaturateCast<T>(ir);
+			}
+		};
+		
+		template <typename T>
+		struct ChannelElement<DXGIPixel::UNORM, T, typename std::enable_if<std::is_signed<T>::value>::type>
+		{
+			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+			{
+				/* don't renormalize so we can get the original data in MATLAB */
+				((T*)data)[dst_idx] = SaturateCast<T>(SignExtend(ir, num_bits));
+			}
+		};
+		
+		template <typename T>
+		struct ChannelElement<DXGIPixel::UNORM, T, typename std::enable_if<std::is_floating_point<T>::value>::type>
+		{
+			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+			{
+				/* converted to FLOAT */
+				((T*)data)[dst_idx] = (T)ir/((1u << num_bits) - 1);
 			}
 		};
 		
@@ -177,7 +201,7 @@ namespace DXTMEX
 		{
 			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits)
 			{
-				((T*)data)[dst_idx] = (T)DXGIPixel::SignExtend<T>(ir, num_bits);
+				((T*)data)[dst_idx] = DXGIPixel::SignExtend<T>(ir, num_bits);
 			}
 		};
 		
@@ -335,47 +359,25 @@ namespace DXTMEX
 		};
 		
 		/* SRGB conversions */
-		template <>
-		struct ChannelElement<DXGIPixel::SRGB, mxSingle>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
-			{
-				float c = (float)ir/(((uint32_t)1 << num_bits) - 1);
-				if(c <= D3D11_SRGB_TO_FLOAT_THRESHOLD)
-				{
-					((mxSingle*)data)[dst_idx] = c/D3D11_SRGB_TO_FLOAT_DENOMINATOR_1;
-				}
-				else
-				{
-					((mxSingle*)data)[dst_idx] = std::pow((c + D3D11_SRGB_TO_FLOAT_OFFSET)/D3D11_SRGB_TO_FLOAT_DENOMINATOR_2, D3D11_SRGB_TO_FLOAT_EXPONENT);
-				}
-			}
-		};
 		
-		template <>
-		struct ChannelElement<DXGIPixel::SRGB, mxUint8>
+		/* Don't use SRGB to FLOAT conversion because the MATLAB float representation
+		 * is actually just a linear map to SRGB. Treat this as UNORM. */
+		template <typename T>
+		struct ChannelElement<DXGIPixel::SRGB, T>
 		{
 			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 8)
 			{
-				((mxUint8*)data)[dst_idx] = (mxUint8)ir;
+				ChannelElement<DXGIPixel::UNORM, T>::Store(data, dst_idx, ir, num_bits);
 			}
 		};
 		
-		template <>
-		struct ChannelElement<DXGIPixel::SHAREDEXP, mxUint16>
+		/* SHAREDEXP conversions */
+		template <typename T>
+		struct ChannelElement<DXGIPixel::SHAREDEXP, T>
 		{
 			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 16)
 			{
-				((mxUint16*)data)[dst_idx] = (mxUint16)ir;
-			}
-		};
-		
-		template <>
-		struct ChannelElement<DXGIPixel::SHAREDEXP, mxUint8>
-		{
-			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 8)
-			{
-				((mxUint8*)data)[dst_idx] = (mxUint8)ir;
+				ChannelElement<DXGIPixel::UNORM, T>::Store(data, dst_idx, ir, num_bits);
 			}
 		};
 		
@@ -385,7 +387,16 @@ namespace DXTMEX
 		{
 			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 			{
-				((mxSingle*)data)[dst_idx] = (float)((ir & (uint32_t)0x3ff) - 0x180) / 510.f;
+				((mxSingle*)data)[dst_idx] = (float)((ir & 0x3FFu) - 0x180) / 510.0f;
+			}
+		};
+		
+		template <>
+		struct ChannelElement<DXGIPixel::XR_BIAS, mxDouble>
+		{
+			static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+			{
+				((mxDouble*)data)[dst_idx] = (double)(((ir & 0x3FFu) - 0x180) / 510.0f);
 			}
 		};
 		
