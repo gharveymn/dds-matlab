@@ -13,7 +13,6 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <fcntl.h>
 #include <errno.h>
 
 #ifndef _WIN32
@@ -21,8 +20,6 @@
 #else
 HRESULT hres = 0;
 #endif
-
-#include "dxtmex_mexerror.hpp"
 
 #define VALUE_AS_STRING(value) #value
 #define EXPAND_AS_STRING(num) VALUE_AS_STRING(num)
@@ -107,7 +104,7 @@ namespace
 	 * Writes out the system error string.
 	 *
 	 * @param buffer A preallocated buffer. Should be size MEU_SYSTEM_ERROR_STRING_SIZE.
-	 * @param error_code The system error code returned from GetLastError() or errno.
+	 * @param error_severity The system error code returned from GetLastError() or errno.
 	 */
 	void WriteSystemErrorString(char* buffer, unsigned int error_severity)
 	{

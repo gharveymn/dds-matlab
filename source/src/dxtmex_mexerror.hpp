@@ -45,7 +45,6 @@ namespace MEXError
 	 * @param file_name The file name. Only pass __FILE__.
 	 * @param line The line number. Only pass __LINE__.
 	 * @param error_severity The error severity. pass a bitmask of the MEU_SEVERITY macros.
-	 * @param error_code The system error code fetched by either GetLastError() or errno.
 	 * @param error_id The identifier for this error which will be appended to "[library name]:".
 	 * @param error_message The printf message format associated to the error.
 	 * @param ... The error message params in printf style.

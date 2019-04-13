@@ -2,9 +2,6 @@
 #include "dxtmex_mexerror.hpp"
 #include "DirectXTex.h"
 #include "DirectXTex.inl"
-#include "dxtmex_maps.hpp"
-#include "dxtmex_utils.hpp"
-#include "dxtmex_mexutils.hpp"
 #include "dxtmex_dxtimagearray.hpp"
 #include "dxtmex_flags.hpp"
 
@@ -27,9 +24,9 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidDirectiveError", "The directive supplied must be of class 'char'.");
 	}
 	
-	DXTImageArray::operation op = DXTImageArray::GetOperation(prhs[0]);
+	const DXTImageArray::operation op = DXTImageArray::GetOperation(prhs[0]);
 	
-	int num_in              = nrhs-1;
+	const int num_in              = nrhs-1;
 	const mxArray** in      = prhs+1;
 	
 	switch(op)
@@ -113,7 +110,7 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL, "NoImageSuppliedError", "No images were supplied. Cannot continue.");
 	}
 	
-	int num_options         = num_in-1;
+	const int num_options         = num_in-1;
 	const mxArray** options = in+1;
 	
 	switch(op)

@@ -164,8 +164,7 @@ classdef DXTImage
 			cubearr{7} =  toimage(obj.Images(1));
 			cubearr{8} =  toimage(obj.Images(6));
 			cubearr{10} = toimage(obj.Images(4));
-			h = figure;
-			montage(cubearr, 'Size', [3,4]);
+			h = montage(cubearr, 'Size', [3,4]);
 		end
 		
 		function h = dispcube(obj)

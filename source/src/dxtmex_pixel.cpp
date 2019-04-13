@@ -725,13 +725,17 @@ namespace DXTMEX
 	
 	void DXGIPixel::ExtractChannels(const size_t* ch_indices, const size_t* out_idx, size_t num_idx, mxArray*&out, mxClassID out_class)
 	{
+		size_t i, j, k, l;
+		size_t src_idx;
+		mwIndex dst_idx;
+		
 		DXGIPixel::DATATYPE input_datatype;
 		
 		StorageFunction storage_function = nullptr;
 		
 		/* find max output index */
 		size_t max_out_idx = 0;
-		for(size_t i = 0; i < num_idx; i++)
+		for(i = 0; i < num_idx; i++)
 		{
 			max_out_idx = (out_idx[i] > max_out_idx)? out_idx[i] : max_out_idx;
 		}
@@ -740,7 +744,7 @@ namespace DXTMEX
 		mwSize ndim = ARRAYSIZE(out_dims);
 		
 		/* check channels requested are inside bounds */
-		for(size_t i = 0; i < num_idx; i++)
+		for(i = 0; i < num_idx; i++)
 		{
 			if(ch_indices[i] >= this->_num_channels)
 			{
@@ -782,7 +786,7 @@ namespace DXTMEX
 		else
 		{
 			input_datatype = this->_channels[ch_indices[0]].datatype;
-			for(size_t i = 0; i < num_idx; i++)
+			for(i = 0; i < num_idx; i++)
 			{
 				if(this->_channels[ch_indices[i]].datatype != input_datatype)
 				{
@@ -880,7 +884,7 @@ namespace DXTMEX
 					
 					/* recalculate max output index ignoring indices referring to the shared exponent */
 					max_out_idx = 0;
-					for(size_t i = 0; i < num_idx; i++)
+					for(i = 0; i < num_idx; i++)
 					{
 						if(ch_indices[i] != 3)
 						{
@@ -903,9 +907,9 @@ namespace DXTMEX
 					 * The mantissa is NOT offset by 1.
 					 */
 					float scalar;
-					for(size_t i = 0; i < this->_num_pixels(); i++)
+					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels(); src_idx++)
 					{
-						uint32_t pixel_data = *(pixels + i);
+						uint32_t pixel_data = *(pixels + src_idx);
 						int32_t exp_bits = (pixel_data & SHAREDEXP_E_MASK) >> 27u;
 						if(exp_bits == 0)
 						{
@@ -916,13 +920,18 @@ namespace DXTMEX
 						{
 							scalar = std::pow(2.0f, exp_bits - SHAREDEXP_BIAS);
 						}
-						for(size_t j = 0; j < num_idx; j++)
+						
+						for(j = 0; j < num_idx; j++)
 						{
-							if(ch_indices[i] != 3)
+							if(ch_indices[src_idx] != 3)
 							{
-								mwIndex dst_idx = i/this->_image->width + (i%this->_image->width)*this->_image->height + out_idx[j]*this->_num_pixels();
-								data[dst_idx] = ((pixel_data & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset)*scalar;
+								data[dst_idx + out_idx[j]*this->_num_pixels()] = ((pixel_data & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset)*scalar;
 							}
+						}
+						dst_idx += this->_image->height;
+						if(dst_idx >= this->_num_pixels())
+						{
+							dst_idx = src_idx / this->_image->width;
 						}
 					}
 					return; // EARLY RETURN
@@ -1029,9 +1038,13 @@ namespace DXTMEX
 			}
 		}
 		
+		if(out == nullptr)
+		{
+			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_SYSTEM, "NullOutputError", "Could not allocate the image matrix. Your system may be out of memory.");
+		}
 		
 		void* data = mxGetData(out);
-		switch(this->_pixel_width)
+		switch(this->_pixel_bit_width)
 		{
 			case 128: /* always uniform width with 4 channels */
 			case 96:  /* always uniform width with 3 channels*/
@@ -1069,19 +1082,23 @@ namespace DXTMEX
 				{
 					auto pixels = (uint64_t*)this->_image->pixels;
 					uint64_t masks[4];
-					for(size_t i = 0; i < this->_num_channels; i++)
+					for(i = 0; i < this->_num_channels; i++)
 					{
-						masks[i] =(((uint64_t)1 << this->_channels[i].width) - (uint64_t)1) << this->_channels[i].offset;
+						masks[i] =((1ull << this->_channels[i].width) - 1ull) << this->_channels[i].offset;
 					}
 					
-					for(size_t i = 0; i < this->_num_pixels(); i++)
+					uint32_t channel_data;
+					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels(); src_idx++)
 					{
-						uint64_t pixel_data = *(pixels + i);
-						for(size_t j = 0; j < num_idx; j++)
+						for(j = 0; j < num_idx; j++)
 						{
-							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels();
-							auto channel_data = (uint32_t)((pixel_data & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset);
-							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_indices[j]].width);
+							channel_data = (uint32_t)((*(pixels + src_idx) & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset);
+							storage_function(data, dst_idx + out_idx[j] * this->_num_pixels(), channel_data, (uint32_t)this->_channels[ch_indices[j]].width);
+						}
+						dst_idx += this->_image->height;
+						if(dst_idx >= this->_num_pixels())
+						{
+							dst_idx = src_idx / this->_image->width;
 						}
 					}
 				}
@@ -1103,6 +1120,7 @@ namespace DXTMEX
 							this->StoreUniformChannels<uint16_t>(ch_indices, out_idx, num_idx, data, storage_function);
 							break;
 						}
+						case 3:
 						case 4:
 						{
 							this->StoreUniformChannels<uint8_t>(ch_indices, out_idx, num_idx, data, storage_function);
@@ -1121,19 +1139,24 @@ namespace DXTMEX
 				{
 					auto pixels = (uint32_t*)this->_image->pixels;
 					uint32_t masks[4];
-					for(size_t i = 0; i < this->_num_channels; i++)
+					for(i = 0; i < this->_num_channels; i++)
 					{
 						masks[i] =(((uint32_t)1 << this->_channels[i].width) - (uint32_t)1) << this->_channels[i].offset;
 					}
 					
-					for(size_t i = 0; i < this->_num_pixels(); i++)
+					uint32_t channel_data;
+					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels(); src_idx++)
 					{
-						uint32_t pixel_data = *(pixels + i);
-						for(size_t j = 0; j < num_idx; j++)
+						uint32_t pixel_data = *(pixels + src_idx);
+						for(j = 0; j < num_idx; j++)
 						{
-							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels();
-							uint32_t channel_data = (pixel_data & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset;
-							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_indices[j]].width);
+							channel_data = (uint32_t)((pixel_data & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset);
+							storage_function(data, dst_idx + out_idx[j] * this->_num_pixels(), channel_data, (uint32_t)this->_channels[ch_indices[j]].width);
+						}
+						dst_idx += this->_image->height;
+						if(dst_idx >= this->_num_pixels())
+						{
+							dst_idx = src_idx / this->_image->width;
 						}
 					}
 				}
@@ -1168,19 +1191,23 @@ namespace DXTMEX
 				{
 					auto pixels = (uint16_t*)this->_image->pixels;
 					uint16_t masks[4];
-					for(size_t i = 0; i < this->_num_channels; i++)
+					for(i = 0; i < this->_num_channels; i++)
 					{
-						masks[i] = (uint16_t)(((uint16_t)1 << (uint16_t)this->_channels[i].width) - (uint16_t)1) << this->_channels[i].offset;
+						masks[i] = (uint16_t)((1u << this->_channels[i].width) - 1u) << this->_channels[i].offset;
 					}
 					
-					for(size_t i = 0; i < this->_num_pixels(); i++)
+					uint32_t channel_data;
+					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels(); src_idx++)
 					{
-						uint32_t pixel_data = *(pixels + i);
-						for(size_t j = 0; j < num_idx; j++)
+						for(j = 0; j < num_idx; j++)
 						{
-							mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels();
-							uint32_t channel_data = (uint16_t)(pixel_data & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset;
-							storage_function(data, dst_idx, channel_data, (uint32_t)this->_channels[ch_indices[j]].width);
+							channel_data = (uint32_t)((uint16_t)(*(pixels + src_idx) & masks[ch_indices[j]]) >> this->_channels[ch_indices[j]].offset);
+							storage_function(data, dst_idx + out_idx[j] * this->_num_pixels(), channel_data, (uint32_t)this->_channels[ch_indices[j]].width);
+						}
+						dst_idx += this->_image->height;
+						if(dst_idx >= this->_num_pixels())
+						{
+							dst_idx = src_idx / this->_image->width;
 						}
 					}
 				}
@@ -1218,24 +1245,29 @@ namespace DXTMEX
 			case 1:
 			{
 				auto data_l = (mxLogical*)data;
-				size_t i, j, k, l;
-				size_t px_idx = 0;
+				mxLogical channel_data;
+				
+				src_idx = 0;
+				dst_idx = 0;
 				for(i = 0; i < this->_image->height; i++)
 				{
-					
 					/* 32-bit width is fastest on x86-64 and i686 */
 					auto pixels32 = (uint32_t*)(this->_image->pixels + i*this->_image->rowPitch);
 					for(j = 0; j < this->_image->rowPitch / 4; j++)
 					{
 						uint32_t page = pixels32[j];
-						for(k = 32; k > 0; k--, px_idx++)
+						for(k = 32; k > 0; k--, src_idx++)
 						{
 							/* there should only be one channel, but it may be repeatedly stored */
-							uint32_t channel_data = (uint32_t)(page >> (k - 1)) & 1u;
+							channel_data = ((page >> (k - 1)) & 1u) != 0;
 							for(l = 0; l < num_idx; l++)
 							{
-								mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + out_idx[l] * this->_num_pixels();
-								data_l[dst_idx] = channel_data;
+								data_l[dst_idx + out_idx[l] * this->_num_pixels()] = channel_data;
+							}
+							dst_idx += this->_image->height;
+							if(dst_idx >= this->_num_pixels())
+							{
+								dst_idx = src_idx / this->_image->width;
 							}
 						}
 					}
@@ -1243,29 +1275,41 @@ namespace DXTMEX
 					for(j *= 4; j < this->_image->rowPitch - 1; j++)
 					{
 						uint8_t page = pixels8[j];
-						for(k = 8; k > 0; k--, px_idx++)
+						for(k = 8; k > 0; k--, src_idx++)
 						{
 							/* there should only be one channel, but it may be repeatedly stored */
-							uint8_t channel_data = (uint8_t)(page >> (k - 1)) & 1u;
+							channel_data = ((uint8_t)(page >> (k - 1)) & 1u) != 0;
 							for(l = 0; l < num_idx; l++)
 							{
-								mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + out_idx[l] * this->_num_pixels();
-								data_l[dst_idx] = channel_data;
+								data_l[dst_idx + out_idx[l] * this->_num_pixels()] = channel_data;
+							}
+							dst_idx += this->_image->height;
+							if(dst_idx >= this->_num_pixels())
+							{
+								dst_idx = src_idx / this->_image->width;
 							}
 						}
 					}
 					uint8_t page = pixels8[j];
-					for(k = this->_image->width - ((this->_image->rowPitch - 1) * 8); k > 0; k--, px_idx++)
+					for(k = this->_image->width - ((this->_image->rowPitch - 1) * 8); k > 0; k--, src_idx++)
 					{
 						/* there should only be one channel, but it may be repeatedly stored */
-						uint8_t channel_data = (uint8_t)(page >> (k - 1)) & 1u;
+						channel_data = ((uint8_t)(page >> (k - 1)) & 1u) != 0;
 						for(l = 0; l < num_idx; l++)
 						{
-							mwIndex dst_idx = px_idx / this->_image->width + (px_idx % this->_image->width) * this->_image->height + out_idx[l] * this->_num_pixels();
-							data_l[dst_idx] = channel_data;
+							data_l[dst_idx + out_idx[l] * this->_num_pixels()] = channel_data;
+						}
+						dst_idx += this->_image->height;
+						if(dst_idx >= this->_num_pixels())
+						{
+							dst_idx = src_idx / this->_image->width;
 						}
 					}
 				}
+			}
+			default:
+			{
+				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL, "PixelWidthError", "Unexpected pixel width %u was encountered. Cannot continue.", this->_pixel_bit_width);
 			}
 		}
 	}

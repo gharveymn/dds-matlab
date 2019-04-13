@@ -4,7 +4,7 @@
 #include "DirectXTex.h"
 
 #ifndef MAX
-#  define MAX(a,b) a > b? a : b
+#  define MAX(a,b) (((a) > (b))? (a) : (b))
 #endif
 
 #define MEXF_IN  int nrhs, const mxArray* prhs[]
@@ -16,10 +16,11 @@ namespace DXTMEX
 	class DXTImage : public DirectX::ScratchImage
 	{
 	public:
-		DXTImage() : _dds_flags(DirectX::DDS_FLAGS_NONE), _type(DXTImage::UNKNOWN) {};
-		explicit DXTImage(DirectX::DDS_FLAGS flags) : _dds_flags(flags), _type(DXTImage::UNKNOWN) {};
-		explicit DXTImage(const mxArray* mx_width, const mxArray* mx_height, const mxArray* mx_row_pitch, const mxArray* mx_slice_pitch, const mxArray* mx_pixels, const mxArray* mx_formatid, const mxArray* mx_flags);
+		DXTImage() : _type(DXTImage::UNKNOWN), _dds_flags(DirectX::DDS_FLAGS_NONE) {};
+		explicit DXTImage(const mxArray* mx_data);
+		explicit DXTImage(DirectX::DDS_FLAGS flags) : _type(DXTImage::UNKNOWN), _dds_flags(flags) {};
 		DXTImage(const mxArray* mx_metadata, const mxArray* mx_images);  // MATLAB 'DXTImage' object -> MEX object
+		DXTImage(const mxArray* mx_width, const mxArray* mx_height, const mxArray* mx_row_pitch, const mxArray* mx_slice_pitch, const mxArray* mx_pixels, const mxArray* mx_formatid, const mxArray* mx_flags);
 		// Inherits:
 		// size_t      m_nimages;
 		// size_t      m_size;
@@ -62,11 +63,11 @@ namespace DXTMEX
 		void ToMatrix  (mxArray*& mx_dxtimage_rgb, bool combine_alpha);
 		void ToMatrix  (mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a);
 		
-		void WriteHDR(std::wstring &filename, std::wstring &ext, bool remove_idx_if_singular = false);
-		void WriteHDR(std::wstring &filename, size_t mip, size_t item, size_t slice);
+		void WriteHDR(const std::wstring &filename, std::wstring &ext, bool remove_idx_if_singular = false);
+		void WriteHDR(const std::wstring &filename, size_t mip, size_t item, size_t slice);
 		
-		void WriteTGA(std::wstring &filename, std::wstring &ext, bool remove_idx_if_singular = false);
-		void WriteTGA(std::wstring &filename, size_t mip, size_t item, size_t slice);
+		void WriteTGA(const std::wstring &filename, std::wstring &ext, bool remove_idx_if_singular = false);
+		void WriteTGA(const std::wstring &filename, size_t mip, size_t item, size_t slice);
 		
 	private:
 		DXTImage::IMAGE_TYPE _type;
@@ -246,6 +247,7 @@ namespace DXTMEX
 			{
 				total += this->_arr[i].GetImageCount();
 			}
+			return total;
 		}
 		
 		void ReplaceArray(DXTImage* new_arr)

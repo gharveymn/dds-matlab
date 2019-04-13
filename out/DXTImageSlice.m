@@ -45,6 +45,11 @@ classdef DXTImageSlice
 			[varargout{1:nout}] = dxtmex('TO_IMAGE', struct(obj));
 		end
 		
+		function varargout = tomatrix(obj)
+			nout = max(nargout,1);
+			[varargout{1:nout}] = dxtmex('TO_MATRIX', struct(obj));
+		end
+		
 		function ddswrite(obj, varargin)
 			dxtmex('WRITE_DDS', struct(obj), varargin{:});
 		end

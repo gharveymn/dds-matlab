@@ -1,5 +1,5 @@
-function INSTALL
-%% INSTALL  Run this file to compile <strong>dxtmex</strong>.
+function BUILD
+%% BUILD  Run this file to compile <strong>dxtmex</strong>.
 %    The output is written to '../out/private'.
 %
 %    Thanks for downloading!

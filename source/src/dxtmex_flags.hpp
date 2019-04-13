@@ -30,7 +30,7 @@ namespace DXTMEX
 			{
 				_toname_map.emplace(flags[i], names[i]);
 				auto tmpname = std::string(names[i]);
-				std::transform(tmpname.begin(), tmpname.end(), tmpname.begin(), ::toupper);
+				std::transform(tmpname.begin(), tmpname.end(), tmpname.begin(), [](char c){return (char)::toupper(c);});
 				_toflag_map.emplace(tmpname, flags[i]);
 			}
 		};

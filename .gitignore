@@ -1,6 +1,9 @@
 /*
 !.gitignore
-!/out/
-!/source/
+!.gitmodules
 !LICENSE
 !README.md
+!dxtmex.sln
+!dxtmex.vcxproj
+!/out/
+!/source/

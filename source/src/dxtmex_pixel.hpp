@@ -48,7 +48,8 @@ namespace DXTMEX
 		
 		explicit DXGIPixel(DXGI_FORMAT fmt) :
 		_format(fmt),
-		_pixel_width(DirectX::BitsPerPixel(fmt)),
+		_pixel_bit_width(DirectX::BitsPerPixel(fmt)),
+		_pixel_byte_width((_pixel_bit_width + 7u) / 8u),
 		_num_channels(0),
 		_channels{0},
 		_image(nullptr),
@@ -60,7 +61,8 @@ namespace DXTMEX
 		
 		DXGIPixel(DXGI_FORMAT fmt, const DirectX::Image* image) :
 		_format(fmt),
-		_pixel_width(DirectX::BitsPerPixel(fmt)),
+		_pixel_bit_width(DirectX::BitsPerPixel(fmt)),
+		_pixel_byte_width((_pixel_bit_width + 7u) / 8u),
 		_num_channels(0),
 		_channels{0},
 		_image(image),
@@ -103,7 +105,8 @@ namespace DXTMEX
 			char                name;             /* ex. R, G, B, A, L, B, etc. */
 		};
 		
-		const size_t            _pixel_width;
+		const size_t            _pixel_bit_width;
+		const size_t            _pixel_byte_width;
 		size_t                  _num_channels;
 		DXGIPixel::PixelChannel _channels[MAX_CHANNELS];
 		const DirectX::Image*   _image;
@@ -145,14 +148,18 @@ namespace DXTMEX
 		template <typename T>
 		inline void StoreUniformChannels(const size_t* ch_idx, const size_t* out_idx,  size_t num_idx, void* data, StorageFunction storage_function)
 		{
-			auto pixels = (T*)this->_image->pixels;
+			mwIndex dst_idx = 0;
 			for(size_t i = 0; i < this->_num_pixels(); i++)
 			{
-				auto v_pix = pixels + i*this->_num_channels;
+				auto v_pix = this->_image->pixels + i*this->_pixel_byte_width;
 				for(size_t j = 0; j < num_idx; j++)
 				{
-					mwIndex dst_idx = i / this->_image->width + (i % this->_image->width) * this->_image->height + out_idx[j] * this->_num_pixels();
-					storage_function(data, dst_idx, *(v_pix + ch_idx[j]), (uint32_t)(sizeof(T) * 8));
+					storage_function(data, dst_idx + out_idx[j] * this->_num_pixels(), *(v_pix + ch_idx[j]), (uint32_t)(sizeof(T) * 8u));
+				}
+				dst_idx += this->_image->height;
+				if(dst_idx >= this->_num_pixels())
+				{
+					dst_idx = i / this->_image->width;
 				}
 			}
 		}
@@ -176,7 +183,7 @@ namespace DXTMEX
 	struct DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, T>
 	{
 		static constexpr size_t cpy_sz = sizeof(T) < sizeof(uint32_t)? sizeof(T) : sizeof(uint32_t);
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
 		{
 			memcpy((T*)data + dst_idx, &ir, cpy_sz);
 		}
@@ -218,7 +225,7 @@ namespace DXTMEX
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::UNORM, T, typename std::enable_if<std::is_integral<T>::value>::type>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
 		{
 			/* don't renormalize so we can get the original data in MATLAB */
 			((T*)data)[dst_idx] = SaturateCast<T>(ir);
@@ -253,7 +260,7 @@ namespace DXTMEX
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::UINT, T>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits)
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
 		{
 			((T*)data)[dst_idx] = SaturateCast<T>(ir);
 		}
@@ -432,7 +439,7 @@ namespace DXTMEX
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::XR_BIAS, T, typename std::enable_if<std::is_floating_point<T>::value>::type>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
 		{
 			((T*)data)[dst_idx] = (T)((ir & 0x3FFu) - 0x180) / 510.0f;
 		}

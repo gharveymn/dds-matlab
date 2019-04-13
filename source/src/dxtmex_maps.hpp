@@ -3,7 +3,6 @@
 #include "DirectXTex.h"
 #include <unordered_map>
 #include "dxtmex_dxtimagearray.hpp"
-#include "dxtmex_mexerror.hpp"
 
 namespace DXTMEX
 {

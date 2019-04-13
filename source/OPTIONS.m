@@ -3,5 +3,5 @@ function opts = OPTIONS
 	%	Set these to true or false according to your preferences.
 
 	%% Enable or disable debug mode
-	opts.debug = true;
+	opts.debug = false;
 end
