@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "mex.h"
 #include "DirectXTex.h"
 
