@@ -254,6 +254,6 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="C:\USERS\GENE\APPDATA\LOCAL\MICROSOFT\VISUALSTUDIO\16.0_01FE6D1B\EXTENSIONS\NTJR5Y3M.V54\ProjectTemplates\VC\MATLAB\1033\MEXFunctionTemplate\matlab.targets" />
+    <Import Project="$(MSBuildProjectDirectory)\matlab.targets" />
   </ImportGroup>
 </Project>

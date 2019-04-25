@@ -2,6 +2,7 @@
 
 #include "mex.h"
 #include "DirectXTex.h"
+#include <atomic>
 
 #define SHAREDEXP_BIAS 0xF
 #define SHAREDEXP_R_MASK 0x000001FF
@@ -26,6 +27,62 @@
 
 namespace DXTMEX
 {
+
+	enum class ir32 : uint32_t {};
+
+	template <typename T>
+	constexpr T to_integer(ir32 ir)
+	{
+		return T(ir);
+	}
+
+	template <typename T>
+	constexpr ir32& operator<<=(ir32& ir, typename std::enable_if<std::is_integral<T>::value>::type s) noexcept
+	{
+		return ir = ir32(static_cast<uint32_T>(ir) << s);
+	}
+
+	template <typename T>
+	constexpr ir32 operator<<(ir32 & ir, typename std::enable_if<std::is_integral<T>::value>::type s) noexcept
+	{
+		return ir32(static_cast<uint32_t>(ir) << s);
+	}
+
+	template <typename T>
+	constexpr ir32& operator>>=(ir32 & ir, typename std::enable_if<std::is_integral<T>::value>::type s) noexcept
+	{
+		return ir = ir32(static_cast<uint32_t>(ir) >> s);
+	}
+
+	template <typename T>
+	constexpr ir32 operator>>(ir32 & ir, typename std::enable_if<std::is_integral<T>::value>::type s) noexcept
+	{
+		return ir32(static_cast<uint32_T>(ir) >> s);
+	}
+
+#define IR32_LOP_EQ(OP) \
+constexpr ir32& operator##OP##=(ir32& ir, ir32 r) noexcept \
+{                      \
+	return ir = ir32(static_cast<uint32_t>(ir) OP static_cast<uint32_t>(r)); \
+}
+
+#define IR32_LOP(OP) \
+constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
+{                      \
+	return ir32(static_cast<uint32_t>(ir) OP static_cast<uint32_t>(r)); \
+}
+
+	IR32_LOP_EQ(| )
+		IR32_LOP(| )
+		IR32_LOP_EQ(^)
+		IR32_LOP(^)
+		IR32_LOP_EQ(&)
+		IR32_LOP(&)
+
+		constexpr ir32 operator~(ir32 ir) noexcept
+	{
+		return ir32(~static_cast<uint32_t>(ir));
+	}
 	
 	class DXGIPixel
 	{
@@ -81,6 +138,8 @@ namespace DXTMEX
 		{
 			return this->_image->width * this->_image->height;
 		}
+
+		void InsertChannels(const size_t* dims, size_t num_dims, void* data);
 		
 		void ExtractChannels(const size_t* ch_idx, const size_t* out_idx, size_t num_idx, mxArray*& out, mxClassID out_class = mxUNKNOWN_CLASS);
 		inline void ExtractChannels(size_t ch_idx, size_t out_idx,  mxArray*& out, mxClassID out_class = mxUNKNOWN_CLASS)
@@ -141,8 +200,6 @@ namespace DXTMEX
 		template <DXGIPixel::DATATYPE, typename, class enable = void>
 		struct ChannelElement;
 		
-		
-		
 		void SetChannels(DXGI_FORMAT);
 		
 		template <typename T>
@@ -163,6 +220,26 @@ namespace DXTMEX
 				}
 			}
 		}
+
+		template <typename T>
+		class ChannelExtractor
+		{
+		private:
+			const DXGIPixel& _parent;
+			T _masks[4];
+
+		public:
+			ChannelExtractor(const DXGIPixel& parent) : _parent(parent)
+			{
+				for (size_t i = 0; i < parent._num_channels; i++)
+				{
+					this->_masks[i] = ((T(1) << parent._channels[i].width) - T(1)) << parent._channels[i].offset;
+				}
+			}
+
+
+		};
+
 	};
 	
 	template <>
@@ -183,7 +260,7 @@ namespace DXTMEX
 	struct DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, T>
 	{
 		static constexpr size_t cpy_sz = sizeof(T) < sizeof(uint32_t)? sizeof(T) : sizeof(uint32_t);
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
+		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
 		{
 			memcpy((T*)data + dst_idx, &ir, cpy_sz);
 		}
@@ -195,7 +272,7 @@ namespace DXTMEX
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::SNORM, T, typename std::enable_if<std::is_integral<T>::value>::type>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 		{
 			((T*)data)[dst_idx] = SaturateCast<T>(SignExtend(ir, num_bits));
 		}
@@ -206,7 +283,7 @@ namespace DXTMEX
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::SNORM, T, typename std::enable_if<std::is_floating_point<T>::value>::type>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 		{
 			uint32_t MSB = (uint32_t)1 << (num_bits - 1);
 			if(ir == MSB)
@@ -225,7 +302,7 @@ namespace DXTMEX
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::UNORM, T, typename std::enable_if<std::is_integral<T>::value>::type>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
+		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
 		{
 			/* don't renormalize so we can get the original data in MATLAB */
 			((T*)data)[dst_idx] = SaturateCast<T>(ir);
@@ -237,7 +314,7 @@ namespace DXTMEX
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::UNORM, T, typename std::enable_if<std::is_floating_point<T>::value>::type>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 		{
 			/* converted to FLOAT */
 			((T*)data)[dst_idx] = (T)ir/((1u << num_bits) - 1);
@@ -249,7 +326,7 @@ namespace DXTMEX
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::SINT, T>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits)
+		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits)
 		{
 			((T*)data)[dst_idx] = SaturateCast<T>(SignExtend(ir, num_bits));
 		}
@@ -260,7 +337,7 @@ namespace DXTMEX
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::UINT, T>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
+		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
 		{
 			((T*)data)[dst_idx] = SaturateCast<T>(ir);
 		}
@@ -271,7 +348,7 @@ namespace DXTMEX
 	template <>
 	struct DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxSingle>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 		{
 			((mxSingle*)data)[dst_idx] = (num_bits == 32)? (mxSingle)*((float*)&ir) : GetFloat(ir, num_bits);
 		}
@@ -338,7 +415,7 @@ namespace DXTMEX
 	template <>
 	struct DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxDouble>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 		{
 			((mxDouble*)data)[dst_idx] = (num_bits == 32)? (mxDouble)*((float*)&ir) : GetDouble(ir, num_bits);
 		}
@@ -404,7 +481,7 @@ namespace DXTMEX
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::FLOAT, T>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 		{
 			((T*)data)[dst_idx] = (num_bits == 32)? (T)ir : (T)DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxSingle>::GetFloat(ir, num_bits);
 		}
@@ -417,9 +494,9 @@ namespace DXTMEX
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::SRGB, T>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 8)
+		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 8)
 		{
-			DXGIPixel::ChannelElement<DXGIPixel::UNORM, T>::Store(data, dst_idx, ir, num_bits);
+			DXGIPixel::ChannelElement<DXGIPixel::UNORM, T>::Extract(data, dst_idx, ir, num_bits);
 		}
 	};
 	
@@ -428,9 +505,9 @@ namespace DXTMEX
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::SHAREDEXP, T>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 16)
+		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 16)
 		{
-			DXGIPixel::ChannelElement<DXGIPixel::UINT, T>::Store(data, dst_idx, ir, num_bits);
+			DXGIPixel::ChannelElement<DXGIPixel::UINT, T>::Extract(data, dst_idx, ir, num_bits);
 		}
 	};
 	
@@ -439,7 +516,7 @@ namespace DXTMEX
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::XR_BIAS, T, typename std::enable_if<std::is_floating_point<T>::value>::type>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
+		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
 		{
 			((T*)data)[dst_idx] = (T)((ir & 0x3FFu) - 0x180) / 510.0f;
 		}
@@ -449,12 +526,11 @@ namespace DXTMEX
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::XR_BIAS, T, typename std::enable_if<std::is_integral<T>::value>::type>
 	{
-		static inline void Store(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 		{
-			DXGIPixel::ChannelElement<DXGIPixel::UINT, T>::Store(data, dst_idx, ir, num_bits);
+			DXGIPixel::ChannelElement<DXGIPixel::UINT, T>::Extract(data, dst_idx, ir, num_bits);
 		}
-	};
-	
+	};	
 	
 }
 

@@ -13,19 +13,54 @@ using namespace DXTMEX;
 DXTImage::DXTImage(const mxArray* mx_data) : _type(DXTImage::UNKNOWN), _dds_flags(DirectX::DDS_FLAGS_NONE)
 {
 	DXGI_FORMAT format;
+	bool is_grayscale;
+	bool has_alpha;
 
 	const mwSize* dims = mxGetDimensions(mx_data);
+	mwSize num_dims = mxGetNumberOfDimensions(mx_data);
 
 	MEXError::PrintMexError(MEU_FL,
 					    MEU_SEVERITY_USER,
 					    "InvalidImportError",
 					    "Work in progress.");
 
+	
+	if(num_dims < 4)
+	{
+		if(num_dims == 3)
+		{
+			is_grayscale = false;
+			has_alpha = (dims[2] == 4);
+			if(dims[2] > 4)
+			{
+				MEXError::PrintMexError(MEU_FL,
+								    MEU_SEVERITY_USER,
+								    "InvalidImportError",
+								    "The size of the third dimension is too large. The input may be a maximum of m-by-n-by-4.");
+			}
+		}
+		else
+		{
+			is_grayscale = true;
+			has_alpha = false;
+		}
+
+	}
+	else
+	{
+		MEXError::PrintMexError(MEU_FL,
+						    MEU_SEVERITY_USER,
+						    "InvalidImportError",
+						    "Too many dimensions.");
+	}
+
+
 	// determine output format
 	switch(mxGetClassID(mx_data))
 	{
 		case mxINT8_CLASS:
 		{
+			
 		}
 		case mxINT16_CLASS:
 		case mxINT32_CLASS:
