@@ -62,8 +62,10 @@ namespace DXTMEX
 		
 		void ToImage   (mxArray*& mx_dxtimage_rgb, bool combine_alpha);
 		void ToImage   (mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a);
-		void ToMatrix  (mxArray*& mx_dxtimage_rgb, bool combine_alpha);
-		void ToMatrix  (mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a);
+		void ToImageMatrix  (mxArray*& mx_dxtimage_rgb, bool combine_alpha);
+		void ToImageMatrix(mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a);
+
+		void ToMatrix(mxArray*& mx_dxtimage_out);
 		
 		void WriteHDR(const std::wstring &filename, std::wstring &ext, bool remove_idx_if_singular = false);
 		void WriteHDR(const std::wstring &filename, size_t mip, size_t item, size_t slice);

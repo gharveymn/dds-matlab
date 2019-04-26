@@ -414,17 +414,17 @@ void DXTImage::ToImage(mxArray*& mx_dxtimage_rgb, bool combine_alpha)
 {
 	DXTImage prepared_images;
 	this->PrepareImages(prepared_images);
-	prepared_images.ToMatrix(mx_dxtimage_rgb, combine_alpha);
+	prepared_images.ToImageMatrix(mx_dxtimage_rgb, combine_alpha);
 }
 
 void DXTImage::ToImage(mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a)
 {
 	DXTImage prepared_images;
 	this->PrepareImages(prepared_images);
-	prepared_images.ToMatrix(mx_dxtimage_rgb, mx_dxtimage_a);
+	prepared_images.ToImageMatrix(mx_dxtimage_rgb, mx_dxtimage_a);
 }
 
-void DXTImage::ToMatrix(mxArray*& mx_dxtimage_rgb, bool combine_alpha)
+void DXTImage::ToImageMatrix(mxArray*& mx_dxtimage_rgb, bool combine_alpha)
 {
 	size_t i, j, k;
 	if(this->GetImageCount() == 1)
@@ -472,7 +472,7 @@ void DXTImage::ToMatrix(mxArray*& mx_dxtimage_rgb, bool combine_alpha)
 	}
 }
 
-void DXTImage::ToMatrix(mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a)
+void DXTImage::ToImageMatrix(mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a)
 {
 	size_t i, j, k;
 	if(this->GetImageCount() == 1)
@@ -501,6 +501,41 @@ void DXTImage::ToMatrix(mxArray*& mx_dxtimage_rgb, mxArray*& mx_dxtimage_a)
 				}
 			}
 			if(depth > 1)
+			{
+				depth >>= 1u;
+			}
+		}
+	}
+}
+
+
+void DXTImage::ToMatrix(mxArray*& mx_dxtimage_out)
+{
+	size_t i, j, k;
+	if (this->GetImageCount() == 1)
+	{
+		DXGIPixel matrix_constructor(this->GetMetadata().format, this->GetImage(0, 0, 0));
+		matrix_constructor.ExtractAll(mx_dxtimage_out);
+	}
+	else
+	{
+		mxArray* tmp_out;
+		DirectX::TexMetadata metadata = this->GetMetadata();
+		size_t depth = metadata.depth;
+		mx_dxtimage_out = mxCreateCellMatrix(MAX(metadata.arraySize, metadata.depth), metadata.mipLevels);
+		DXGIPixel matrix_constructor(metadata.format);
+		for (i = 0; i < metadata.mipLevels; i++)
+		{
+			for (j = 0; j < metadata.arraySize; j++)
+			{
+				for (k = 0; k < depth; k++)
+				{
+					matrix_constructor.SetImage(this->GetImage(i, j, k));
+					matrix_constructor.ExtractAll(tmp_out);
+					mxSetCell(mx_dxtimage_out, this->ComputeIndexMEX(i, j, k), tmp_out);
+				}
+			}
+			if (depth > 1)
 			{
 				depth >>= 1u;
 			}

@@ -1609,42 +1609,17 @@ void DXTImageArray::ToMatrix(int nlhs, mxArray *plhs[], int nrhs, const mxArray*
 	
 	if(this->GetSize() == 1)
 	{
-		if(nlhs > 1)
-		{
-			this->GetDXTImage(0).ToMatrix(plhs[0], plhs[1]);
-		}
-		else
-		{
-			this->GetDXTImage(0).ToMatrix(plhs[0], combine_alpha);
-		}
+		this->GetDXTImage(0).ToMatrix(plhs[0]);
 	}
 	else
 	{
-		if(nlhs > 1)
+		plhs[0] = mxCreateCellMatrix(this->GetM(), this->GetN());
+		for(i = 0; i < this->GetSize(); i++)
 		{
-			plhs[0] = mxCreateCellMatrix(this->GetM(), this->GetN());
-			plhs[1] = mxCreateCellMatrix(this->GetM(), this->GetN());
-			for(i = 0; i < this->GetSize(); i++)
-			{
-				mxArray* tmp[2];
-				this->GetDXTImage(i).ToMatrix(tmp[0], tmp[1]);
-				mxSetCell(plhs[0], i, tmp[0]);
-				mxSetCell(plhs[1], i, tmp[1]);
-			}
-			
-			
+			mxArray* tmp;
+			this->GetDXTImage(i).ToMatrix(tmp);
+			mxSetCell(plhs[0], i, tmp);
 		}
-		else
-		{
-			plhs[0] = mxCreateCellMatrix(this->GetM(), this->GetN());
-			for(i = 0; i < this->GetSize(); i++)
-			{
-				mxArray* tmp;
-				this->GetDXTImage(i).ToMatrix(tmp, combine_alpha);
-				mxSetCell(plhs[0], i, tmp);
-			}
-		}
-		
 	}
 }
 

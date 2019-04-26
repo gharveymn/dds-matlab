@@ -108,7 +108,7 @@
       <PreprocessorDefinitions>MATLAB_DEFAULT_RELEASE=R2017b;USE_MEX_CMD;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;_SECURE_SCL=0;MATLAB_MEX_FILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)source\lib\DirectXTex\DirectXTex;$(Matlab_IncludePath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <StructMemberAlignment>8Bytes</StructMemberAlignment>
       <ExceptionHandling>SyncCThrow</ExceptionHandling>
@@ -164,7 +164,7 @@
       <PreprocessorDefinitions>MATLAB_DEFAULT_RELEASE=R2017b;USE_MEX_CMD;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;_SECURE_SCL=0;MATLAB_MEX_FILE;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)source\lib\DirectXTex\DirectXTex;$(Matlab_IncludePath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <Optimization>MaxSpeed</Optimization>
       <StructMemberAlignment>8Bytes</StructMemberAlignment>

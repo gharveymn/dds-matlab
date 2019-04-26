@@ -722,8 +722,40 @@ namespace DXTMEX
 		}
 	}
 
-	void DXGIPixel::InsertChannels(const size_t* dims, size_t num_dims, void* data)
+	void DXGIPixel::InsertChannels(const size_t* dims, size_t num_dims, void* data, bool input_is_typeless)
 	{
+
+		/* options: 
+		 * input is linear/srgb
+		 * raw copy
+		 * 
+		 * if SRGB then must be mxUint8, mxUint16, mxUint32, Single, or Double
+		 * 
+		 * by default:
+		 * mxUint8  => DXGI_FORMAT_R8G8B8A8_UNORM_SRGB or DXGI_FORMAT_R8G8B8X8_UNORM_SRGB (direct no-op conversion)
+		 * mxUint16 => FLOAT [0.0, 1.0] => DXGI_FORMAT_R16G16B16A16_UNORM
+		 * mxUint32 => FLOAT [0.0, 1.0] => DXGI_FORMAT_R32G32B32A32_UNORM
+		 * 
+		 * mxInt8   => FLOAT [-1.0, 1.0] => DXGI_FORMAT_R8G8B8A8_SNORM
+		 * mxInt16  => FLOAT [-1.0, 1.0] => DXGI_FORMAT_R16G16B16A16_SNORM
+		 * mxInt32  => FLOAT [-1.0, 1.0] => DXGI_FORMAT_R32G32B32A32_SNORM
+		 * 
+		 * mxSingle => FLOAT [0.0, 1.0] => DXGI_FORMAT_R32G32B32A32_FLOAT
+		 * mxDouble => FLOAT [0.0, 1.0] => DXGI_FORMAT_R32G32B32A32_FLOAT (loss of precision)
+		 * 
+		 * if linear:
+		 * mxUint8  => DXGI_FORMAT_R8G8B8A8_UNORM
+		 * mxUint16 => DXGI_FORMAT_R16G16B16A16_UNORM
+		 * mxUint32 => DXGI_FORMAT_R32G32B32A32_UNORM
+		 * 
+		 * mxInt8   => DXGI_FORMAT_R8G8B8A8_SNORM
+		 * mxInt16  => DXGI_FORMAT_R16G16B16A16_SNORM
+		 * mxInt32  => DXGI_FORMAT_R32G32B32A32_SNORM
+		 * 
+		 * mxSingle => DXGI_FORMAT_R32G32B32A32_FLOAT
+		 * mxDouble => DXGI_FORMAT_R32G32B32A32_FLOAT (loss of precision)
+		 */ 
+
 		if(num_dims < 3 || dims[2] == 1)
 		{
 			/* copy data throughout */
@@ -865,25 +897,25 @@ namespace DXTMEX
 				case DXGIPixel::SNORM:
 				{
 					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SNORM, mxSingle>::Extract;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SNORM, mxSingle>::StoreMX;
 					break;
 				}
 				case DXGIPixel::UNORM:
 				{
 					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UNORM, mxSingle>::Extract;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UNORM, mxSingle>::StoreMX;
 					break;
 				}
 				case DXGIPixel::FLOAT:
 				{
 					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxSingle>::Extract;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxSingle>::StoreMX;
 					break;
 				}
 				case DXGIPixel::SRGB:
 				{
 					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SRGB, mxSingle>::Extract;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SRGB, mxSingle>::StoreMX;
 					break;
 				}
 				case DXGIPixel::SHAREDEXP:
@@ -956,7 +988,7 @@ namespace DXTMEX
 				case DXGIPixel::XR_BIAS:
 				{
 					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::XR_BIAS, mxSingle>::Extract;
+					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::XR_BIAS, mxSingle>::StoreMX;
 					break;
 				}
 				case DXGIPixel::SINT:
@@ -971,22 +1003,22 @@ namespace DXTMEX
 					if(max_width == 1)
 					{
 						out = mxCreateLogicalArray(ndim, out_dims);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxLogical>::Extract;
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxLogical>::StoreMX;
 					}
 					else if(max_width <= 8)
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxINT8_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt8>::Extract;
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt8>::StoreMX;
 					}
 					else if(max_width <= 16)
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxINT16_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt16>::Extract;
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt16>::StoreMX;
 					}
 					else
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxINT32_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt32>::Extract;
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt32>::StoreMX;
 					}
 					break;
 				}
@@ -998,22 +1030,22 @@ namespace DXTMEX
 					if(max_width == 1)
 					{
 						out = mxCreateLogicalArray(ndim, out_dims);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxLogical>::Extract;
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxLogical>::StoreMX;
 					}
 					else if(max_width <= 8)
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxUINT8_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint8>::Extract;
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint8>::StoreMX;
 					}
 					else if(max_width <= 16)
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxUINT16_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint16>::Extract;
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint16>::StoreMX;
 					}
 					else
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxUINT32_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint32>::Extract;
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint32>::StoreMX;
 					}
 					break;
 				}
@@ -1025,22 +1057,22 @@ namespace DXTMEX
 					if(max_width == 1)
 					{
 						out = mxCreateLogicalArray(ndim, out_dims);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxLogical>::Extract;
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxLogical>::StoreMX;
 					}
 					else if(max_width <= 8)
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxUINT8_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint8>::Extract;
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint8>::StoreMX;
 					}
 					else if(max_width <= 16)
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxUINT16_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint16>::Extract;
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint16>::StoreMX;
 					}
 					else
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxUINT32_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint32>::Extract;
+						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint32>::StoreMX;
 					}
 					break;
 				}
@@ -1097,20 +1129,15 @@ namespace DXTMEX
 				}
 				else
 				{
-					auto pixels = (uint64_t*)this->_image->pixels;
-					uint64_t masks[4];
-					for(i = 0; i < this->_num_channels; i++)
-					{
-						masks[i] =((1ull << this->_channels[i].width) - 1ull) << this->_channels[i].offset;
-					}
-					
-					uint32_t channel_data;
+					ChannelExtractor<uint64_t> extractor(reinterpret_cast<uint64_t*>(this->_image->pixels), this->_channels, this->_num_channels);
 					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels(); src_idx++)
 					{
 						for(j = 0; j < num_idx; j++)
 						{
-							channel_data = (uint32_t)((*(pixels + src_idx) & masks[ch_idx[j]]) >> this->_channels[ch_idx[j]].offset);
-							storage_function(data, dst_idx + out_idx[j] * this->_num_pixels(), channel_data, (uint32_t)this->_channels[ch_idx[j]].width);
+							storage_function(data, 
+										  dst_idx + out_idx[j] * this->_num_pixels(), 
+										  extractor.Extract(src_idx, ch_idx[j]),
+										  this->_channels[ch_idx[j]].width);
 						}
 						dst_idx += this->_image->height;
 						if(dst_idx >= this->_num_pixels())
@@ -1154,21 +1181,15 @@ namespace DXTMEX
 				}
 				else
 				{
-					auto pixels = (uint32_t*)this->_image->pixels;
-					uint32_t masks[4];
-					for(i = 0; i < this->_num_channels; i++)
-					{
-						masks[i] =(((uint32_t)1 << this->_channels[i].width) - (uint32_t)1) << this->_channels[i].offset;
-					}
-					
-					uint32_t channel_data;
+					ChannelExtractor<uint32_t> extractor(reinterpret_cast<uint32_t*>(this->_image->pixels), this->_channels, this->_num_channels);
 					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels(); src_idx++)
 					{
-						uint32_t pixel_data = *(pixels + src_idx);
 						for(j = 0; j < num_idx; j++)
 						{
-							channel_data = (uint32_t)((pixel_data & masks[ch_idx[j]]) >> this->_channels[ch_idx[j]].offset);
-							storage_function(data, dst_idx + out_idx[j] * this->_num_pixels(), channel_data, (uint32_t)this->_channels[ch_idx[j]].width);
+							storage_function(data, 
+										  dst_idx + out_idx[j] * this->_num_pixels(), 
+										  extractor.Extract(src_idx, ch_idx[j]),
+										  this->_channels[ch_idx[j]].width);
 						}
 						dst_idx += this->_image->height;
 						if(dst_idx >= this->_num_pixels())
@@ -1206,20 +1227,15 @@ namespace DXTMEX
 				}
 				else
 				{
-					auto pixels = (uint16_t*)this->_image->pixels;
-					uint16_t masks[4];
-					for(i = 0; i < this->_num_channels; i++)
-					{
-						masks[i] = (uint16_t)((1u << this->_channels[i].width) - 1u) << this->_channels[i].offset;
-					}
-					
-					uint32_t channel_data;
+					ChannelExtractor<uint16_t> extractor(reinterpret_cast<uint16_t*>(this->_image->pixels), this->_channels, this->_num_channels);
 					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels(); src_idx++)
 					{
 						for(j = 0; j < num_idx; j++)
 						{
-							channel_data = (uint32_t)((uint16_t)(*(pixels + src_idx) & masks[ch_idx[j]]) >> this->_channels[ch_idx[j]].offset);
-							storage_function(data, dst_idx + out_idx[j] * this->_num_pixels(), channel_data, (uint32_t)this->_channels[ch_idx[j]].width);
+							storage_function(data, 
+										  dst_idx + out_idx[j] * this->_num_pixels(), 
+										  extractor.Extract(src_idx, ch_idx[j]),
+										  this->_channels[ch_idx[j]].width);
 						}
 						dst_idx += this->_image->height;
 						if(dst_idx >= this->_num_pixels())
@@ -1403,21 +1419,32 @@ namespace DXTMEX
 			mx_a = mxCreateDoubleMatrix(0, 0, mxREAL);
 		}
 	}
+
+	void DXGIPixel::ExtractAll(mxArray*& mx_out)
+	{
+		size_t ch_idx[MAX_CHANNELS];
+		size_t out_idx[MAX_CHANNELS];
+		for (size_t i = 0; i < this->_num_channels; i++)
+		{
+			ch_idx[i] = i;
+		}
+		this->ExtractChannels(ch_idx, ch_idx, this->_num_channels, mx_out);
+	}
 	
 	DXGIPixel::StorageFunction DXGIPixel::GetStorageFunction(const DXGIPixel::DATATYPE in_type, mxClassID out_type)
 	{
 #define STORAGE_FUNCTION_SWITCH(IN_TYPE, OUT_TYPE) \
 switch(OUT_TYPE) \
 { \
-	case mxINT8_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE,  mxInt8>::Extract;            \
-	case mxINT16_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxInt16>::Extract;           \
-	case mxINT32_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxInt32>::Extract;           \
-	case mxUINT8_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxUint8>::Extract;           \
-	case mxUINT16_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxUint16>::Extract;         \
-	case mxUINT32_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxUint32>::Extract;         \
-	case mxSINGLE_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxSingle>::Extract;         \
-	case mxDOUBLE_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxDouble>::Extract;         \
-	case mxLOGICAL_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxLogical>::Extract;       \
+	case mxINT8_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE,  mxInt8>::StoreMX;            \
+	case mxINT16_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxInt16>::StoreMX;           \
+	case mxINT32_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxInt32>::StoreMX;           \
+	case mxUINT8_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxUint8>::StoreMX;           \
+	case mxUINT16_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxUint16>::StoreMX;         \
+	case mxUINT32_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxUint32>::StoreMX;         \
+	case mxSINGLE_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxSingle>::StoreMX;         \
+	case mxDOUBLE_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxDouble>::StoreMX;         \
+	case mxLOGICAL_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxLogical>::StoreMX;       \
 	default:                                                                                  \
 	{                                                                                         \
 		MEXError::PrintMexError(MEU_FL,                                                      \

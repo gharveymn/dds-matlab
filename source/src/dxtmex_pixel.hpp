@@ -27,62 +27,6 @@
 
 namespace DXTMEX
 {
-
-	enum class ir32 : uint32_t {};
-
-	template <typename T>
-	constexpr T to_integer(ir32 ir)
-	{
-		return T(ir);
-	}
-
-	template <typename T>
-	constexpr ir32& operator<<=(ir32& ir, typename std::enable_if<std::is_integral<T>::value>::type s) noexcept
-	{
-		return ir = ir32(static_cast<uint32_T>(ir) << s);
-	}
-
-	template <typename T>
-	constexpr ir32 operator<<(ir32 & ir, typename std::enable_if<std::is_integral<T>::value>::type s) noexcept
-	{
-		return ir32(static_cast<uint32_t>(ir) << s);
-	}
-
-	template <typename T>
-	constexpr ir32& operator>>=(ir32 & ir, typename std::enable_if<std::is_integral<T>::value>::type s) noexcept
-	{
-		return ir = ir32(static_cast<uint32_t>(ir) >> s);
-	}
-
-	template <typename T>
-	constexpr ir32 operator>>(ir32 & ir, typename std::enable_if<std::is_integral<T>::value>::type s) noexcept
-	{
-		return ir32(static_cast<uint32_T>(ir) >> s);
-	}
-
-#define IR32_LOP_EQ(OP) \
-constexpr ir32& operator##OP##=(ir32& ir, ir32 r) noexcept \
-{                      \
-	return ir = ir32(static_cast<uint32_t>(ir) OP static_cast<uint32_t>(r)); \
-}
-
-#define IR32_LOP(OP) \
-constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
-{                      \
-	return ir32(static_cast<uint32_t>(ir) OP static_cast<uint32_t>(r)); \
-}
-
-	IR32_LOP_EQ(| )
-		IR32_LOP(| )
-		IR32_LOP_EQ(^)
-		IR32_LOP(^)
-		IR32_LOP_EQ(&)
-		IR32_LOP(&)
-
-		constexpr ir32 operator~(ir32 ir) noexcept
-	{
-		return ir32(~static_cast<uint32_t>(ir));
-	}
 	
 	class DXGIPixel
 	{
@@ -108,7 +52,6 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 		_pixel_bit_width(DirectX::BitsPerPixel(fmt)),
 		_pixel_byte_width((_pixel_bit_width + 7u) / 8u),
 		_num_channels(0),
-		_channels{0},
 		_image(nullptr),
 		_has_uniform_datatype(false),
 		_has_uniform_width(false)
@@ -121,7 +64,6 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 		_pixel_bit_width(DirectX::BitsPerPixel(fmt)),
 		_pixel_byte_width((_pixel_bit_width + 7u) / 8u),
 		_num_channels(0),
-		_channels{0},
 		_image(image),
 		_has_uniform_datatype(false),
 		_has_uniform_width(false)
@@ -139,7 +81,7 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 			return this->_image->width * this->_image->height;
 		}
 
-		void InsertChannels(const size_t* dims, size_t num_dims, void* data);
+		void InsertChannels(const size_t* dims, size_t num_dims, void* data, bool input_is_typeless);
 		
 		void ExtractChannels(const size_t* ch_idx, const size_t* out_idx, size_t num_idx, mxArray*& out, mxClassID out_class = mxUNKNOWN_CLASS);
 		inline void ExtractChannels(size_t ch_idx, size_t out_idx,  mxArray*& out, mxClassID out_class = mxUNKNOWN_CLASS)
@@ -152,6 +94,7 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 		void ExtractRGB(mxArray*& mx_rgb);
 		void ExtractRGBA(mxArray*& mx_rgba);
 		void ExtractRGBA(mxArray*& mx_rgb, mxArray*& mx_a);
+		void ExtractAll(mxArray*& mx_out);
 		
 	private:
 		
@@ -208,10 +151,10 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 			mwIndex dst_idx = 0;
 			for(size_t i = 0; i < this->_num_pixels(); i++)
 			{
-				auto v_pix = this->_image->pixels + i*this->_pixel_byte_width;
+				T* v_pix = reinterpret_cast<T*>(this->_image->pixels + i*this->_pixel_byte_width);
 				for(size_t j = 0; j < num_idx; j++)
 				{
-					storage_function(data, dst_idx + out_idx[j] * this->_num_pixels(), *(v_pix + ch_idx[j]), (uint32_t)(sizeof(T) * 8u));
+					storage_function(data, dst_idx + out_idx[j] * this->_num_pixels(), *(v_pix + ch_idx[j]), sizeof(T) * 8u);
 				}
 				dst_idx += this->_image->height;
 				if(dst_idx >= this->_num_pixels())
@@ -225,23 +168,57 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 		class ChannelExtractor
 		{
 		private:
-			const DXGIPixel& _parent;
+			const T* _pixels;
 			T _masks[4];
+			size_t _offsets[4];
 
 		public:
-			ChannelExtractor(const DXGIPixel& parent) : _parent(parent)
+			ChannelExtractor(const T* pixels, const PixelChannel* channels, size_t num_channels) : _pixels(pixels), _masks{0}, _offsets{0}
 			{
-				for (size_t i = 0; i < parent._num_channels; i++)
+				for (size_t i = 0; i < num_channels; i++)
 				{
-					this->_masks[i] = ((T(1) << parent._channels[i].width) - T(1)) << parent._channels[i].offset;
+					this->_masks[i] = ((T(1) << channels[i].width) - T(1)) << channels[i].offset;
+					this->_offsets[i] = channels[i].offset;
 				}
 			}
 
-
+			constexpr uint32_t Extract(size_t data_idx, size_t ch_idx)
+			{
+				return uint32_t((*(this->_pixels + data_idx) & this->_masks[ch_idx]) >> this->_offsets[ch_idx]);
+			}
 		};
 
+		/* unsigned int */
+		template <typename T>
+		constexpr float DXGIPixel::SRGBToLinear(typename std::enable_if<std::is_unsigned<T>::value && std::is_integral<T>::value, T>::type data)
+		{
+			float norm = float(data) / float(std::numeric_limits<T>::max);
+			if (norm <= D3D11_SRGB_TO_FLOAT_THRESHOLD)
+			{
+				return norm / D3D11_SRGB_TO_FLOAT_DENOMINATOR_1;
+			}
+			else
+			{
+				return std::pow((norm + D3D11_SRGB_TO_FLOAT_OFFSET) / D3D11_SRGB_TO_FLOAT_DENOMINATOR_2, D3D11_SRGB_TO_FLOAT_EXPONENT);
+			}
+		}
+
+		/* signed int */
+		template <typename T>
+		constexpr float DXGIPixel::SRGBToLinear(typename std::enable_if<std::is_signed<T>::value && std::is_integral<T>::value, T>::type data)
+		{
+
+		}
+
+		/* floating point */
+		template <typename T>
+		constexpr float DXGIPixel::SRGBToLinear(typename std::enable_if<std::is_floating_point<T>::value, T>::type data)
+		{
+
+		}
+		
 	};
-	
+
 	template <>
 	constexpr mxLogical DXGIPixel::SaturateCast<mxLogical>(int32_t ir)
 	{
@@ -260,7 +237,7 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 	struct DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, T>
 	{
 		static constexpr size_t cpy_sz = sizeof(T) < sizeof(uint32_t)? sizeof(T) : sizeof(uint32_t);
-		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
+		static inline void StoreMX(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
 		{
 			memcpy((T*)data + dst_idx, &ir, cpy_sz);
 		}
@@ -272,7 +249,7 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::SNORM, T, typename std::enable_if<std::is_integral<T>::value>::type>
 	{
-		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void StoreMX(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 		{
 			((T*)data)[dst_idx] = SaturateCast<T>(SignExtend(ir, num_bits));
 		}
@@ -283,7 +260,7 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::SNORM, T, typename std::enable_if<std::is_floating_point<T>::value>::type>
 	{
-		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void StoreMX(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 		{
 			uint32_t MSB = (uint32_t)1 << (num_bits - 1);
 			if(ir == MSB)
@@ -302,7 +279,7 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::UNORM, T, typename std::enable_if<std::is_integral<T>::value>::type>
 	{
-		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
+		static inline void StoreMX(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
 		{
 			/* don't renormalize so we can get the original data in MATLAB */
 			((T*)data)[dst_idx] = SaturateCast<T>(ir);
@@ -314,7 +291,7 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::UNORM, T, typename std::enable_if<std::is_floating_point<T>::value>::type>
 	{
-		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void StoreMX(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 		{
 			/* converted to FLOAT */
 			((T*)data)[dst_idx] = (T)ir/((1u << num_bits) - 1);
@@ -326,7 +303,7 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::SINT, T>
 	{
-		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits)
+		static inline void StoreMX(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits)
 		{
 			((T*)data)[dst_idx] = SaturateCast<T>(SignExtend(ir, num_bits));
 		}
@@ -337,7 +314,7 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::UINT, T>
 	{
-		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
+		static inline void StoreMX(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
 		{
 			((T*)data)[dst_idx] = SaturateCast<T>(ir);
 		}
@@ -348,7 +325,7 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 	template <>
 	struct DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxSingle>
 	{
-		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void StoreMX(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 		{
 			((mxSingle*)data)[dst_idx] = (num_bits == 32)? (mxSingle)*((float*)&ir) : GetFloat(ir, num_bits);
 		}
@@ -415,7 +392,7 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 	template <>
 	struct DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxDouble>
 	{
-		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void StoreMX(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 		{
 			((mxDouble*)data)[dst_idx] = (num_bits == 32)? (mxDouble)*((float*)&ir) : GetDouble(ir, num_bits);
 		}
@@ -481,7 +458,7 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::FLOAT, T>
 	{
-		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void StoreMX(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 		{
 			((T*)data)[dst_idx] = (num_bits == 32)? (T)ir : (T)DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxSingle>::GetFloat(ir, num_bits);
 		}
@@ -494,9 +471,9 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::SRGB, T>
 	{
-		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 8)
+		static inline void StoreMX(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 8)
 		{
-			DXGIPixel::ChannelElement<DXGIPixel::UNORM, T>::Extract(data, dst_idx, ir, num_bits);
+			DXGIPixel::ChannelElement<DXGIPixel::UNORM, T>::StoreMX(data, dst_idx, ir, num_bits);
 		}
 	};
 	
@@ -505,9 +482,9 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::SHAREDEXP, T>
 	{
-		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 16)
+		static inline void StoreMX(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 16)
 		{
-			DXGIPixel::ChannelElement<DXGIPixel::UINT, T>::Extract(data, dst_idx, ir, num_bits);
+			DXGIPixel::ChannelElement<DXGIPixel::UINT, T>::StoreMX(data, dst_idx, ir, num_bits);
 		}
 	};
 	
@@ -516,7 +493,7 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::XR_BIAS, T, typename std::enable_if<std::is_floating_point<T>::value>::type>
 	{
-		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
+		static inline void StoreMX(void* data, mwIndex dst_idx, uint32_t ir, uint32_t)
 		{
 			((T*)data)[dst_idx] = (T)((ir & 0x3FFu) - 0x180) / 510.0f;
 		}
@@ -526,9 +503,9 @@ constexpr ir32 operator##OP##(ir32 ir, ir32 r) noexcept \
 	template <typename T>
 	struct DXGIPixel::ChannelElement<DXGIPixel::XR_BIAS, T, typename std::enable_if<std::is_integral<T>::value>::type>
 	{
-		static inline void Extract(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
+		static inline void StoreMX(void* data, mwIndex dst_idx, uint32_t ir, uint32_t num_bits = 32)
 		{
-			DXGIPixel::ChannelElement<DXGIPixel::UINT, T>::Extract(data, dst_idx, ir, num_bits);
+			DXGIPixel::ChannelElement<DXGIPixel::UINT, T>::StoreMX(data, dst_idx, ir, num_bits);
 		}
 	};	
 	
