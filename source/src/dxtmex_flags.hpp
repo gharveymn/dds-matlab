@@ -6,6 +6,7 @@
 #include "DirectXTex.h"
 #include "dxtmex_mexerror.hpp"
 
+
 namespace DXTMEX
 {
 	template <typename T>
@@ -30,7 +31,7 @@ namespace DXTMEX
 			{
 				_toname_map.emplace(flags[i], names[i]);
 				auto tmpname = std::string(names[i]);
-				std::transform(tmpname.begin(), tmpname.end(), tmpname.begin(), [](char c){return (char)::toupper(c);});
+				std::transform(tmpname.begin(), tmpname.end(), tmpname.begin(), [](char c){return static_cast<char>(::toupper(c));});
 				_toflag_map.emplace(tmpname, flags[i]);
 			}
 		};
@@ -63,8 +64,20 @@ namespace DXTMEX
 		std::unordered_map<T, std::string>& GetFlagToNameMap() {return _toname_map;}
 		
 		std::unordered_map<std::string, T>& GetNameToFlagMap() {return _toflag_map;}
-		
+
 		void ImportFlags(int num_options, const mxArray* mx_options[], T& flags);
+
+		void ImportFlags(const mxArray* mx_flags, T& flags)
+		{
+			if(!mxIsCell(mx_flags))
+			{
+				MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "OptionError", "Value of flags must be class 'cell'");
+			}
+
+			this->ImportFlags(static_cast<int>(mxGetNumberOfElements(mx_flags)), reinterpret_cast<const mxArray * *>(mxGetData(mx_flags)), flags);
+
+		}
+
 		mxArray* ExportFlags(T flags);
 		
 	};
@@ -76,5 +89,8 @@ namespace DXTMEX
 	extern DXTFlags<DirectX::TEX_COMPRESS_FLAGS> g_compressflags;
 	extern DXTFlags<DirectX::CNMAP_FLAGS> g_cnflags;
 	extern DXTFlags<DirectX::CMSE_FLAGS> g_cmseflags;
-	
+	extern DXTFlags<DirectX::CP_FLAGS> g_cpflags;
+
+
+
 }

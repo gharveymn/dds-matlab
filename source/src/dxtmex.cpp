@@ -24,81 +24,96 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER, "InvalidDirectiveError", "The directive supplied must be of class 'char'.");
 	}
 	
-	const DXTImageArray::operation op = DXTImageArray::GetOperation(prhs[0]);
+	const DXTImageArray::OPERATION op = DXTImageArray::GetOperation(prhs[0]);
 	
 	const int num_in              = nrhs-1;
 	const mxArray** in      = prhs+1;
 	
 	switch(op)
 	{
-		case DXTImageArray::READ_DDS:
+		case DXTImageArray::OPERATION::READ_DDS:
 		{
 			DXTImageArray::ReadDDS(nlhs, plhs, num_in, in);
 			return; // EARLY RETURN
 		}
-		case DXTImageArray::READ_HDR:
+		case DXTImageArray::OPERATION::READ_HDR:
 		{
 			DXTImageArray::ReadHDR(nlhs, plhs, num_in, in);
 			return; // EARLY RETURN
 		}
-		case DXTImageArray::READ_TGA:
+		case DXTImageArray::OPERATION::READ_TGA:
 		{
 			DXTImageArray::ReadTGA(nlhs, plhs, num_in, in);
 			return; // EARLY RETURN
 		}
-		case DXTImageArray::READ_DDS_META:
+		case DXTImageArray::OPERATION::READ_DDS_META:
 		{
 			DXTImageArray::ReadDDSMetadata(nlhs, plhs, num_in, in);
 			return; // EARLY RETURN
 		}
-		case DXTImageArray::READ_HDR_META:
+		case DXTImageArray::OPERATION::READ_HDR_META:
 		{
 			DXTImageArray::ReadHDRMetadata(nlhs, plhs, num_in, in);
 			return; // EARLY RETURN
 		}
-		case DXTImageArray::READ_TGA_META:
+		case DXTImageArray::OPERATION::READ_TGA_META:
 		{
 			DXTImageArray::ReadTGAMetadata(nlhs, plhs, num_in, in);
 			return; // EARLY RETURN
 		}
-		case DXTImageArray::IS_DDS:
+		case DXTImageArray::OPERATION::IS_DDS:
 		{
 			DXTImageArray::IsDDS(nlhs, plhs, num_in, in);
 			return; // EARLY RETURN
 		}
-		case DXTImageArray::IS_HDR:
+		case DXTImageArray::OPERATION::IS_HDR:
 		{
 			DXTImageArray::IsHDR(nlhs, plhs, num_in, in);
 			return; // EARLY RETURN
 		}
-		case DXTImageArray::IS_TGA:
+		case DXTImageArray::OPERATION::IS_TGA:
 		{
 			DXTImageArray::IsTGA(nlhs, plhs, num_in, in);
 			return; // EARLY RETURN
 		}
-		case DXTImageArray::WRITE_DDS:
-		case DXTImageArray::WRITE_HDR:
-		case DXTImageArray::WRITE_TGA:
-		case DXTImageArray::FLIP_ROTATE:
-		case DXTImageArray::RESIZE:
-		case DXTImageArray::CONVERT:
-		case DXTImageArray::CONVERT_TO_SINGLE_PLANE:
-		case DXTImageArray::GENERATE_MIPMAPS:
-		case DXTImageArray::GENERATE_MIPMAPS_3D:
-		case DXTImageArray::SCALE_MIPMAPS_ALPHA_FOR_COVERAGE:
-		case DXTImageArray::PREMULTIPLY_ALPHA:
-		case DXTImageArray::COMPRESS:
-		case DXTImageArray::DECOMPRESS:
-		case DXTImageArray::COMPUTE_NORMAL_MAP:
-		case DXTImageArray::COPY_RECTANGLE:
-		case DXTImageArray::COMPUTE_MSE:
-		case DXTImageArray::TO_IMAGE:
-		case DXTImageArray::TO_MATRIX:
+		case DXTImageArray::OPERATION::WRITE_MATRIX_DDS:
+		{
+			DXTImageArray::WriteMatrixDDS(num_in, in);
+			return; // EARLY RETURN
+		}
+		case DXTImageArray::OPERATION::WRITE_MATRIX_HDR:
+		{
+			DXTImageArray::WriteMatrixHDR(num_in, in);
+			return; // EARLY RETURN
+		}
+		case DXTImageArray::OPERATION::WRITE_MATRIX_TGA:
+		{
+			DXTImageArray::WriteMatrixTGA(num_in, in);
+			return; // EARLY RETURN
+		}
+		case DXTImageArray::OPERATION::WRITE_DDS:
+		case DXTImageArray::OPERATION::WRITE_HDR:
+		case DXTImageArray::OPERATION::WRITE_TGA:
+		case DXTImageArray::OPERATION::FLIP_ROTATE:
+		case DXTImageArray::OPERATION::RESIZE:
+		case DXTImageArray::OPERATION::CONVERT:
+		case DXTImageArray::OPERATION::CONVERT_TO_SINGLE_PLANE:
+		case DXTImageArray::OPERATION::GENERATE_MIPMAPS:
+		case DXTImageArray::OPERATION::GENERATE_MIPMAPS_3D:
+		case DXTImageArray::OPERATION::SCALE_MIPMAPS_ALPHA_FOR_COVERAGE:
+		case DXTImageArray::OPERATION::PREMULTIPLY_ALPHA:
+		case DXTImageArray::OPERATION::COMPRESS:
+		case DXTImageArray::OPERATION::DECOMPRESS:
+		case DXTImageArray::OPERATION::COMPUTE_NORMAL_MAP:
+		case DXTImageArray::OPERATION::COPY_RECTANGLE:
+		case DXTImageArray::OPERATION::COMPUTE_MSE:
+		case DXTImageArray::OPERATION::TO_IMAGE:
+		case DXTImageArray::OPERATION::TO_MATRIX:
 		{
 			dxtimage_array.Import(num_in, in);
 			break;
 		}
-		case DXTImageArray::NO_OP:
+		case DXTImageArray::OPERATION::NO_OP:
 		default:
 		{
 			return;
@@ -110,87 +125,87 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_INTERNAL, "NoImageSuppliedError", "No images were supplied. Cannot continue.");
 	}
 	
-	const int num_options         = num_in-1;
+	const int num_options   = num_in-1;
 	const mxArray** options = in+1;
 	
 	switch(op)
 	{
-		case DXTImageArray::WRITE_DDS:
+		case DXTImageArray::OPERATION::WRITE_DDS:
 		{
 			dxtimage_array.WriteDDS(num_options, options);
 			return; // EARLY RETURN
 		}
-		case DXTImageArray::WRITE_HDR:
+		case DXTImageArray::OPERATION::WRITE_HDR:
 		{
 			dxtimage_array.WriteHDR(num_options, options);
 			return; // EARLY RETURN
 		}
-		case DXTImageArray::WRITE_TGA:
+		case DXTImageArray::OPERATION::WRITE_TGA:
 		{
 			dxtimage_array.WriteTGA(num_options, options);
 			return; // EARLY RETURN
 		}
-		case DXTImageArray::TO_IMAGE:
+		case DXTImageArray::OPERATION::TO_IMAGE:
 		{
 			dxtimage_array.ToImage(nlhs, plhs, num_options, options);
 			return; // EARLY RETURN
 		}
-		case DXTImageArray::TO_MATRIX:
+		case DXTImageArray::OPERATION::TO_MATRIX:
 		{
 			dxtimage_array.ToMatrix(nlhs, plhs, num_options, options);
 			return; // EARLY RETURN
 		}
-		case DXTImageArray::FLIP_ROTATE:
+		case DXTImageArray::OPERATION::FLIP_ROTATE:
 		{
 			dxtimage_array.FlipRotate(num_options, options);
 			break;
 		}
-		case DXTImageArray::RESIZE:
+		case DXTImageArray::OPERATION::RESIZE:
 		{
 			dxtimage_array.Resize(num_options, options);
 			break;
 		}
-		case DXTImageArray::CONVERT:
+		case DXTImageArray::OPERATION::CONVERT:
 		{
 			dxtimage_array.Convert(num_options, options);
 			break;
 		}
-		case DXTImageArray::CONVERT_TO_SINGLE_PLANE:
+		case DXTImageArray::OPERATION::CONVERT_TO_SINGLE_PLANE:
 		{
 			dxtimage_array.ConvertToSinglePlane(num_options, options);
 			break;
 		}
-		case DXTImageArray::GENERATE_MIPMAPS:
+		case DXTImageArray::OPERATION::GENERATE_MIPMAPS:
 		{
 			dxtimage_array.GenerateMipMaps(num_options, options);
 			break;
 		}
-		case DXTImageArray::SCALE_MIPMAPS_ALPHA_FOR_COVERAGE:
+		case DXTImageArray::OPERATION::SCALE_MIPMAPS_ALPHA_FOR_COVERAGE:
 		{
 			dxtimage_array.ScaleMipMapsAlphaForCoverage(num_options, options);
 			break;
 		}
-		case DXTImageArray::PREMULTIPLY_ALPHA:
+		case DXTImageArray::OPERATION::PREMULTIPLY_ALPHA:
 		{
 			dxtimage_array.PremultiplyAlpha(num_options, options);
 			break;
 		}
-		case DXTImageArray::COMPRESS:
+		case DXTImageArray::OPERATION::COMPRESS:
 		{
 			dxtimage_array.Compress(num_options, options);
 			break;
 		}
-		case DXTImageArray::DECOMPRESS:
+		case DXTImageArray::OPERATION::DECOMPRESS:
 		{
 			dxtimage_array.Decompress(num_options, options);
 			break;
 		}
-		case DXTImageArray::COMPUTE_NORMAL_MAP:
+		case DXTImageArray::OPERATION::COMPUTE_NORMAL_MAP:
 		{
 			dxtimage_array.ComputeNormalMap(num_options, options);
 			break;
 		}
-		case DXTImageArray::COPY_RECTANGLE:
+		case DXTImageArray::OPERATION::COPY_RECTANGLE:
 		{
 			DXTImageArray dxtimage_src;
 			if(num_options < 1)
@@ -201,7 +216,7 @@ void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 			DXTImageArray::CopyRectangle(dxtimage_array, dxtimage_src, num_options-1, options+1);
 			break;
 		}
-		case DXTImageArray::COMPUTE_MSE:
+		case DXTImageArray::OPERATION::COMPUTE_MSE:
 		{
 			DXTImageArray dxtimage_cmp;
 			if(num_options < 1)

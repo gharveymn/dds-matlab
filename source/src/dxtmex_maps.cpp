@@ -1,6 +1,6 @@
 #include "mex.h"
-#include "dxtmex_maps.hpp"
 #include "dxtmex_flags.hpp"
+#include "dxtmex_maps.hpp"
 #include "dxtmex_mexutils.hpp"
 
 using namespace DXTMEX;
@@ -16,7 +16,7 @@ namespace DXTMEX
 	template class DXTFlags<DirectX::CNMAP_FLAGS>;
 	template class DXTFlags<DirectX::CMSE_FLAGS>;
 	
-	BiMap<DXGI_FORMAT, std::string> g_format_map{{DXGI_FORMAT_UNKNOWN,                    "UNKNOWN"},
+	BiMap<DXGI_FORMAT> g_format_map{{DXGI_FORMAT_UNKNOWN,                    "UNKNOWN"},
 	                                             {DXGI_FORMAT_R32G32B32A32_TYPELESS,      "R32G32B32A32_TYPELESS"},
 	                                             {DXGI_FORMAT_R32G32B32A32_FLOAT,         "R32G32B32A32_FLOAT"},
 	                                             {DXGI_FORMAT_R32G32B32A32_UINT,          "R32G32B32A32_UINT"},
@@ -137,76 +137,24 @@ namespace DXTMEX
 	                                             {DXGI_FORMAT_V408,                       "V408"},
 	                                             {DXGI_FORMAT_FORCE_UINT,                 "FORCE_UINT"}};
 	
-	std::string GetFormatStringFromID(DXGI_FORMAT fmt)
+	BiMap<DirectX::TEX_ALPHA_MODE> g_alphamode_map{{DirectX::TEX_ALPHA_MODE_UNKNOWN,       "UNKNOWN"},
+	                                                            {DirectX::TEX_ALPHA_MODE_STRAIGHT,      "STRAIGHT"},
+	                                                            {DirectX::TEX_ALPHA_MODE_PREMULTIPLIED, "PREMULTIPLIED"},
+	                                                            {DirectX::TEX_ALPHA_MODE_OPAQUE,        "OPAQUE"},
+	                                                            {DirectX::TEX_ALPHA_MODE_CUSTOM,        "CUSTOM"}};
+
+	BiMap<MEXToDXT::COLORSPACE> g_colorspace_map
 	{
-		auto found = g_format_map.Find(fmt);
-		if(!g_format_map.IsValid(found))
-		{
-			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "UnexpectedFormatError", "An unexpected format was encountered (ID: %u).", fmt);
-		}
-		return found->second;
-	}
+		{MEXToDXT::COLORSPACE::DEFAULT, "DEFAULT"},
+		{MEXToDXT::COLORSPACE::LINEAR, "LINEAR"},
+		{MEXToDXT::COLORSPACE::SRGB, "SRGB"}
+	};
 	
-	DXGI_FORMAT GetFormatIDFromString(const std::string& str)
-	{
-		auto found = g_format_map.Find(str);
-		if(!g_format_map.IsValid(found))
-		{
-			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "UnexpectedFormatError", "Unexpected format '%s' was encountered.", str.c_str());
-		}
-		return found->second;
-	}
+	BiMap<DXTImage::IMAGE_TYPE> g_imagetype_map{{DXTImage::IMAGE_TYPE::UNKNOWN, "Unknown"},
+	                                                         {DXTImage::IMAGE_TYPE::DDS,     "DDS"},
+	                                                         {DXTImage::IMAGE_TYPE::HDR,     "HDR"},
+	                                                         {DXTImage::IMAGE_TYPE::TGA,     "TGA"}};
 	
-	BiMap<DirectX::TEX_ALPHA_MODE, std::string> g_alphamode_map{{DirectX::TEX_ALPHA_MODE_UNKNOWN,       "Unknown"},
-	                                                            {DirectX::TEX_ALPHA_MODE_STRAIGHT,      "Straight"},
-	                                                            {DirectX::TEX_ALPHA_MODE_PREMULTIPLIED, "Premultiplied"},
-	                                                            {DirectX::TEX_ALPHA_MODE_OPAQUE,        "Opaque"},
-	                                                            {DirectX::TEX_ALPHA_MODE_CUSTOM,        "Custom"}};
-	
-	std::string GetAlphaModeStringFromID(DirectX::TEX_ALPHA_MODE alpha_mode)
-	{
-		auto found = g_alphamode_map.Find(alpha_mode);
-		if(!g_alphamode_map.IsValid(found))
-		{
-			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "UnexpectedAlphaModeError", "An unexpected alpha mode was encountered (ID: %u).", alpha_mode);
-		}
-		return found->second;
-	}
-	
-	DirectX::TEX_ALPHA_MODE GetAlphaModeIDFromString(const std::string& str)
-	{
-		auto found = g_alphamode_map.Find(str);
-		if(!g_alphamode_map.IsValid(found))
-		{
-			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "UnexpectedAlphaModeError", "Unexpected alpha mode '%s' was encountered.", str.c_str());
-		}
-		return found->second;
-	}
-	
-	BiMap<DXTImage::IMAGE_TYPE, std::string> g_imagetype_map{{DXTImage::UNKNOWN, "Unknown"},
-	                                                         {DXTImage::DDS,     "DDS"},
-	                                                         {DXTImage::HDR,     "HDR"},
-	                                                         {DXTImage::TGA,     "TGA"}};
-	
-	std::string GetImageTypeStringFromID(DXTImage::IMAGE_TYPE image_type)
-	{
-		auto found = g_imagetype_map.Find(image_type);
-		if(!g_imagetype_map.IsValid(found))
-		{
-			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "UnexpectedImageTypeError", "An unexpected image type was encountered (ID: %u).", image_type);
-		}
-		return found->second;
-	}
-	
-	DXTImage::IMAGE_TYPE GetImageTypeIDFromString(const std::string& str)
-	{
-		auto found = g_imagetype_map.Find(str);
-		if(!g_imagetype_map.IsValid(found))
-		{
-			MEXError::PrintMexError(MEU_FL, MEU_SEVERITY_USER|MEU_SEVERITY_INTERNAL, "UnexpectedImageTypeError", "Unexpected image type '%s' was encountered.", str.c_str());
-		}
-		return found->second;
-	}
 	
 	static const DirectX::DDS_FLAGS g_ddsflags_list[] = {DirectX::DDS_FLAGS_NONE,
 	                                                     DirectX::DDS_FLAGS_LEGACY_DWORD,
@@ -411,14 +359,37 @@ namespace DXTMEX
 	DXTFlags<DirectX::CMSE_FLAGS> g_cmseflags(g_num_cmseflags,
 	                                          g_cmseflags_list,
 	                                          g_cmseflags_names);
+
 	
+	static const DirectX::CP_FLAGS g_cpflags_list[]{DirectX::CP_FLAGS_NONE,
+											  DirectX::CP_FLAGS_LEGACY_DWORD,
+											  DirectX::CP_FLAGS_PARAGRAPH,
+											  DirectX::CP_FLAGS_YMM,
+											  DirectX::CP_FLAGS_ZMM,
+											  DirectX::CP_FLAGS_PAGE4K,
+											  DirectX::CP_FLAGS_BAD_DXTN_TAILS,
+											  DirectX::CP_FLAGS_24BPP,
+											  DirectX::CP_FLAGS_16BPP,
+	                                                    DirectX::CP_FLAGS_8BPP};
+	static const int g_num_cpflags = ARRAYSIZE(g_cpflags_list);
+	static const char* g_cpflags_names[g_num_cpflags]{"DirectX::CP_FLAGS_NONE",
+											  "DirectX::CP_FLAGS_LEGACY_DWORD",
+											  "DirectX::CP_FLAGS_PARAGRAPH",
+											  "DirectX::CP_FLAGS_YMM",
+											  "DirectX::CP_FLAGS_ZMM",
+											  "DirectX::CP_FLAGS_PAGE4K",
+											  "DirectX::CP_FLAGS_BAD_DXTN_TAILS",
+											  "DirectX::CP_FLAGS_24BPP",
+											  "DirectX::CP_FLAGS_16BPP",
+											  "DirectX::CP_FLAGS_8BPP"};
+
+	DXTFlags<DirectX::CP_FLAGS> g_cpflags(g_num_cpflags,
+								   g_cpflags_list,
+								   g_cpflags_names);	
 	
 	template<typename T>
 	void DXTFlags<T>::ImportFlags(int num_options, const mxArray* mx_options[], T& flags)
 	{
-		int i;
-		const mxArray* curr_key;
-		const mxArray* curr_val;
 		
 		if((num_options % 2) != 0)
 		{
@@ -428,10 +399,10 @@ namespace DXTMEX
 			                        "Invalid number of arguments. A key is likely missing a value.");
 		}
 		
-		for(i = 0; i < num_options; i += 2)
+		for(int i = 0; i < num_options; i += 2)
 		{
-			curr_key = mx_options[i];
-			curr_val = mx_options[i + 1];
+			const mxArray* curr_key = mx_options[i];
+			const mxArray* curr_val = mx_options[i + 1];
 			if(!mxIsChar(curr_key))
 			{
 				MEXError::PrintMexError(MEU_FL,
@@ -446,20 +417,21 @@ namespace DXTMEX
 				                        "InvalidValueError",
 				                        "All flag values must be scalar class 'logical'.");
 			}
-			MEXUtils::ToUpper((mxArray*)curr_key);
+			MEXUtils::ToUpper(const_cast<mxArray*>(curr_key));
 			char* flagname = mxArrayToString(curr_key);
 			T found_flag = this->FindFlag(flagname);
 			if(mxIsLogicalScalarTrue(curr_val))
 			{
-				flags = (T)(flags | found_flag);
+				flags = static_cast<T>(flags | found_flag);
 			}
 			else
 			{
-				flags = (T)(flags & ~found_flag);
+				flags = static_cast<T>(flags & ~found_flag);
 			}
 			mxFree(flagname);
 		}
 	}
+	template void DXTFlags<DirectX::CP_FLAGS>::ImportFlags(int, const mxArray* [], DirectX::CP_FLAGS&);
 	
 	
 	template<typename T>

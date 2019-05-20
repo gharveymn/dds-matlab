@@ -3,8 +3,7 @@
 #include "dxtmex_mexerror.hpp"
 #include "dxtmex_pixel.hpp"
 
-namespace DXTMEX
-{
+using namespace DXTMEX;
 	void DXGIPixel::SetChannels(DXGI_FORMAT fmt)
 	{
 		/* fail if compressed, packed, video, planar, palettized or typeless */
@@ -15,7 +14,7 @@ namespace DXTMEX
 			                        MEU_SEVERITY_INTERNAL,
 			                        "UnsupportedFormatError",
 			                        "Compressed format '%s' is not supported for this operation.",
-			                        GetFormatStringFromID(fmt).c_str());
+				                   g_format_map.FindStringFromID(fmt).c_str());
 		}
 		
 		if(DirectX::IsPacked(fmt))
@@ -25,7 +24,7 @@ namespace DXTMEX
 			                        MEU_SEVERITY_INTERNAL,
 			                        "UnsupportedFormatError",
 			                        "Packed format '%s' is not supported for this operation.",
-			                        GetFormatStringFromID(fmt).c_str());
+				                   g_format_map.FindStringFromID(fmt).c_str());
 		}
 		
 		if(DirectX::IsVideo(fmt))
@@ -35,7 +34,7 @@ namespace DXTMEX
 			                        MEU_SEVERITY_INTERNAL,
 			                        "UnsupportedFormatError",
 			                        "Video format '%s' is not supported for this operation.",
-			                        GetFormatStringFromID(fmt).c_str());
+				                   g_format_map.FindStringFromID(fmt).c_str());
 		}
 		
 		if(DirectX::IsPlanar(fmt))
@@ -45,7 +44,7 @@ namespace DXTMEX
 			                        MEU_SEVERITY_INTERNAL,
 			                        "UnsupportedFormatError",
 			                        "Planar format '%s' is not supported for this operation.",
-			                        GetFormatStringFromID(fmt).c_str());
+				                   g_format_map.FindStringFromID(fmt).c_str());
 		}
 		
 		if(DirectX::IsPalettized(fmt))
@@ -55,7 +54,7 @@ namespace DXTMEX
 			                        MEU_SEVERITY_INTERNAL,
 			                        "UnsupportedFormatError",
 			                        "Palettized format '%s' is not supported for this operation.",
-			                        GetFormatStringFromID(fmt).c_str());
+			                        g_format_map.FindStringFromID(fmt).c_str());
 		}
 		
 		switch(fmt)
@@ -63,578 +62,578 @@ namespace DXTMEX
 			case DXGI_FORMAT_R32G32B32A32_TYPELESS:
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {32, 0,  0, DXGIPixel::TYPELESS, 'R'};
-				this->_channels[1] = {32, 32, 1, DXGIPixel::TYPELESS, 'G'};
-				this->_channels[2] = {32, 64, 2, DXGIPixel::TYPELESS, 'B'};
-				this->_channels[3] = {32, 96, 3, DXGIPixel::TYPELESS, 'A'};
+				this->_channels[0] = {32, 0,  0, DATATYPE::TYPELESS, 'R'};
+				this->_channels[1] = {32, 32, 1, DATATYPE::TYPELESS, 'G'};
+				this->_channels[2] = {32, 64, 2, DATATYPE::TYPELESS, 'B'};
+				this->_channels[3] = {32, 96, 3, DATATYPE::TYPELESS, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R32G32B32A32_FLOAT: // XMFLOAT4A
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {32, 0,  0, DXGIPixel::FLOAT, 'R'};
-				this->_channels[1] = {32, 32, 1, DXGIPixel::FLOAT, 'G'};
-				this->_channels[2] = {32, 64, 2, DXGIPixel::FLOAT, 'B'};
-				this->_channels[3] = {32, 96, 3, DXGIPixel::FLOAT, 'A'};
+				this->_channels[0] = {32, 0,  0, DATATYPE::FLOAT, 'R'};
+				this->_channels[1] = {32, 32, 1, DATATYPE::FLOAT, 'G'};
+				this->_channels[2] = {32, 64, 2, DATATYPE::FLOAT, 'B'};
+				this->_channels[3] = {32, 96, 3, DATATYPE::FLOAT, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R32G32B32A32_UINT: // XMUINT4
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {32, 0,  0, DXGIPixel::UINT, 'R'};
-				this->_channels[1] = {32, 32, 1, DXGIPixel::UINT, 'G'};
-				this->_channels[2] = {32, 64, 2, DXGIPixel::UINT, 'B'};
-				this->_channels[3] = {32, 96, 3, DXGIPixel::UINT, 'A'};
+				this->_channels[0] = {32, 0,  0, DATATYPE::UINT, 'R'};
+				this->_channels[1] = {32, 32, 1, DATATYPE::UINT, 'G'};
+				this->_channels[2] = {32, 64, 2, DATATYPE::UINT, 'B'};
+				this->_channels[3] = {32, 96, 3, DATATYPE::UINT, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R32G32B32A32_SINT: // XMINT4
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {32, 0,  0, DXGIPixel::SINT, 'R'};
-				this->_channels[1] = {32, 32, 1, DXGIPixel::SINT, 'G'};
-				this->_channels[2] = {32, 64, 2, DXGIPixel::SINT, 'B'};
-				this->_channels[3] = {32, 96, 3, DXGIPixel::SINT, 'A'};
+				this->_channels[0] = {32, 0,  0, DATATYPE::SINT, 'R'};
+				this->_channels[1] = {32, 32, 1, DATATYPE::SINT, 'G'};
+				this->_channels[2] = {32, 64, 2, DATATYPE::SINT, 'B'};
+				this->_channels[3] = {32, 96, 3, DATATYPE::SINT, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R32G32B32_TYPELESS:
 			{
 				this->_num_channels = 3;
-				this->_channels[0] = {32, 0,  0, DXGIPixel::TYPELESS, 'R'};
-				this->_channels[1] = {32, 32, 1, DXGIPixel::TYPELESS, 'G'};
-				this->_channels[2] = {32, 64, 2, DXGIPixel::TYPELESS, 'B'};
+				this->_channels[0] = {32, 0,  0, DATATYPE::TYPELESS, 'R'};
+				this->_channels[1] = {32, 32, 1, DATATYPE::TYPELESS, 'G'};
+				this->_channels[2] = {32, 64, 2, DATATYPE::TYPELESS, 'B'};
 				break;
 			}
 			case DXGI_FORMAT_R32G32B32_FLOAT: //XMFLOAT3 or XMFLOAT3A
 			{
 				this->_num_channels = 3;
-				this->_channels[0] = {32, 0,  0, DXGIPixel::FLOAT, 'R'};
-				this->_channels[1] = {32, 32, 1, DXGIPixel::FLOAT, 'G'};
-				this->_channels[2] = {32, 64, 2, DXGIPixel::FLOAT, 'B'};
+				this->_channels[0] = {32, 0,  0, DATATYPE::FLOAT, 'R'};
+				this->_channels[1] = {32, 32, 1, DATATYPE::FLOAT, 'G'};
+				this->_channels[2] = {32, 64, 2, DATATYPE::FLOAT, 'B'};
 				break;
 			}
 			case DXGI_FORMAT_R32G32B32_UINT: // XMUINT3
 			{
 				this->_num_channels = 3;
-				this->_channels[0] = {32, 0,  0, DXGIPixel::UINT, 'R'};
-				this->_channels[1] = {32, 32, 1, DXGIPixel::UINT, 'G'};
-				this->_channels[2] = {32, 64, 2, DXGIPixel::UINT, 'B'};
+				this->_channels[0] = {32, 0,  0, DATATYPE::UINT, 'R'};
+				this->_channels[1] = {32, 32, 1, DATATYPE::UINT, 'G'};
+				this->_channels[2] = {32, 64, 2, DATATYPE::UINT, 'B'};
 				break;
 			}
 			case DXGI_FORMAT_R32G32B32_SINT: // XMINT3
 			{
 				this->_num_channels = 3;
-				this->_channels[0] = {32, 0,  0, DXGIPixel::SINT, 'R'};
-				this->_channels[1] = {32, 32, 1, DXGIPixel::SINT, 'G'};
-				this->_channels[2] = {32, 64, 2, DXGIPixel::SINT, 'B'};
+				this->_channels[0] = {32, 0,  0, DATATYPE::SINT, 'R'};
+				this->_channels[1] = {32, 32, 1, DATATYPE::SINT, 'G'};
+				this->_channels[2] = {32, 64, 2, DATATYPE::SINT, 'B'};
 				break;
 			}
 			case DXGI_FORMAT_R16G16B16A16_TYPELESS:
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {16, 0,  0, DXGIPixel::TYPELESS, 'R'};
-				this->_channels[1] = {16, 16, 1, DXGIPixel::TYPELESS, 'G'};
-				this->_channels[2] = {16, 32, 2, DXGIPixel::TYPELESS, 'B'};
-				this->_channels[3] = {16, 48, 3, DXGIPixel::TYPELESS, 'A'};
+				this->_channels[0] = {16, 0,  0, DATATYPE::TYPELESS, 'R'};
+				this->_channels[1] = {16, 16, 1, DATATYPE::TYPELESS, 'G'};
+				this->_channels[2] = {16, 32, 2, DATATYPE::TYPELESS, 'B'};
+				this->_channels[3] = {16, 48, 3, DATATYPE::TYPELESS, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R16G16B16A16_FLOAT: // XMHALF4
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {16, 0,  0, DXGIPixel::FLOAT, 'R'};
-				this->_channels[1] = {16, 16, 1, DXGIPixel::FLOAT, 'G'};
-				this->_channels[2] = {16, 32, 2, DXGIPixel::FLOAT, 'B'};
-				this->_channels[3] = {16, 48, 3, DXGIPixel::FLOAT, 'A'};
+				this->_channels[0] = {16, 0,  0, DATATYPE::FLOAT, 'R'};
+				this->_channels[1] = {16, 16, 1, DATATYPE::FLOAT, 'G'};
+				this->_channels[2] = {16, 32, 2, DATATYPE::FLOAT, 'B'};
+				this->_channels[3] = {16, 48, 3, DATATYPE::FLOAT, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R16G16B16A16_UNORM: // XMUSHORTN4
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {16, 0,  0, DXGIPixel::UNORM, 'R'};
-				this->_channels[1] = {16, 16, 1, DXGIPixel::UNORM, 'G'};
-				this->_channels[2] = {16, 32, 2, DXGIPixel::UNORM, 'B'};
-				this->_channels[3] = {16, 48, 3, DXGIPixel::UNORM, 'A'};
+				this->_channels[0] = {16, 0,  0, DATATYPE::UNORM, 'R'};
+				this->_channels[1] = {16, 16, 1, DATATYPE::UNORM, 'G'};
+				this->_channels[2] = {16, 32, 2, DATATYPE::UNORM, 'B'};
+				this->_channels[3] = {16, 48, 3, DATATYPE::UNORM, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R16G16B16A16_UINT: // XMUSHORT4
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {16, 0,  0, DXGIPixel::UINT, 'R'};
-				this->_channels[1] = {16, 16, 1, DXGIPixel::UINT, 'G'};
-				this->_channels[2] = {16, 32, 2, DXGIPixel::UINT, 'B'};
-				this->_channels[3] = {16, 48, 3, DXGIPixel::UINT, 'A'};
+				this->_channels[0] = {16, 0,  0, DATATYPE::UINT, 'R'};
+				this->_channels[1] = {16, 16, 1, DATATYPE::UINT, 'G'};
+				this->_channels[2] = {16, 32, 2, DATATYPE::UINT, 'B'};
+				this->_channels[3] = {16, 48, 3, DATATYPE::UINT, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R16G16B16A16_SNORM: // XMSHORTN4
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {16, 0,  0, DXGIPixel::SNORM, 'R'};
-				this->_channels[1] = {16, 16, 1, DXGIPixel::SNORM, 'G'};
-				this->_channels[2] = {16, 32, 2, DXGIPixel::SNORM, 'B'};
-				this->_channels[3] = {16, 48, 3, DXGIPixel::SNORM, 'A'};
+				this->_channels[0] = {16, 0,  0, DATATYPE::SNORM, 'R'};
+				this->_channels[1] = {16, 16, 1, DATATYPE::SNORM, 'G'};
+				this->_channels[2] = {16, 32, 2, DATATYPE::SNORM, 'B'};
+				this->_channels[3] = {16, 48, 3, DATATYPE::SNORM, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R16G16B16A16_SINT: // XMSHORT4
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {16, 0,  0, DXGIPixel::SINT, 'R'};
-				this->_channels[1] = {16, 16, 1, DXGIPixel::SINT, 'G'};
-				this->_channels[2] = {16, 32, 2, DXGIPixel::SINT, 'B'};
-				this->_channels[3] = {16, 48, 3, DXGIPixel::SINT, 'A'};
+				this->_channels[0] = {16, 0,  0, DATATYPE::SINT, 'R'};
+				this->_channels[1] = {16, 16, 1, DATATYPE::SINT, 'G'};
+				this->_channels[2] = {16, 32, 2, DATATYPE::SINT, 'B'};
+				this->_channels[3] = {16, 48, 3, DATATYPE::SINT, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R32G32_TYPELESS:
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {32, 0,  0, DXGIPixel::TYPELESS, 'R'};
-				this->_channels[1] = {32, 32, 1, DXGIPixel::TYPELESS, 'G'};
+				this->_channels[0] = {32, 0,  0, DATATYPE::TYPELESS, 'R'};
+				this->_channels[1] = {32, 32, 1, DATATYPE::TYPELESS, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R32G32_FLOAT: // XMFLOAT2 or XMFLOAT2A
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {32, 0,  0, DXGIPixel::FLOAT, 'R'};
-				this->_channels[1] = {32, 32, 1, DXGIPixel::FLOAT, 'G'};
+				this->_channels[0] = {32, 0,  0, DATATYPE::FLOAT, 'R'};
+				this->_channels[1] = {32, 32, 1, DATATYPE::FLOAT, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R32G32_UINT: // XMUINT2
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {32, 0,  0, DXGIPixel::UINT, 'R'};
-				this->_channels[1] = {32, 32, 1, DXGIPixel::UINT, 'G'};
+				this->_channels[0] = {32, 0,  0, DATATYPE::UINT, 'R'};
+				this->_channels[1] = {32, 32, 1, DATATYPE::UINT, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R32G32_SINT: // XMINT2
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {32, 0,  0, DXGIPixel::SINT, 'R'};
-				this->_channels[1] = {32, 32, 1, DXGIPixel::SINT, 'G'};
+				this->_channels[0] = {32, 0,  0, DATATYPE::SINT, 'R'};
+				this->_channels[1] = {32, 32, 1, DATATYPE::SINT, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R32G8X24_TYPELESS:
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {32, 0, 0, DXGIPixel::TYPELESS, 'R'};
-				this->_channels[1] = {8, 32, 1, DXGIPixel::TYPELESS, 'G'};
+				this->_channels[0] = {32, 0, 0, DATATYPE::TYPELESS, 'R'};
+				this->_channels[1] = {8, 32, 1, DATATYPE::TYPELESS, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_D32_FLOAT_S8X24_UINT: // UNSUPPORTED
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {32, 0, 0, DXGIPixel::FLOAT, 'D'};
-				this->_channels[1] = {8, 32, 1, DXGIPixel::UINT,  'S'};
+				this->_channels[0] = {32, 0, 0, DATATYPE::FLOAT, 'D'};
+				this->_channels[1] = {8, 32, 1, DATATYPE::UINT,  'S'};
 				break;
 			}
 			case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {32, 0, 0, DXGIPixel::FLOAT, 'R'};
+				this->_channels[0] = {32, 0, 0, DATATYPE::FLOAT, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {8, 32, 1, DXGIPixel::UINT, 'G'};
+				this->_channels[0] = {8, 32, 1, DATATYPE::UINT, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R10G10B10A2_TYPELESS:
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {10, 0,  0, DXGIPixel::TYPELESS, 'R'};
-				this->_channels[1] = {10, 10, 1, DXGIPixel::TYPELESS, 'G'};
-				this->_channels[2] = {10, 20, 2, DXGIPixel::TYPELESS, 'B'};
-				this->_channels[3] = {2,  30, 3, DXGIPixel::TYPELESS, 'A'};
+				this->_channels[0] = {10, 0,  0, DATATYPE::TYPELESS, 'R'};
+				this->_channels[1] = {10, 10, 1, DATATYPE::TYPELESS, 'G'};
+				this->_channels[2] = {10, 20, 2, DATATYPE::TYPELESS, 'B'};
+				this->_channels[3] = {2,  30, 3, DATATYPE::TYPELESS, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R10G10B10A2_UNORM: // XMUDECN4
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {10, 0,  0, DXGIPixel::UNORM, 'R'};
-				this->_channels[1] = {10, 10, 1, DXGIPixel::UNORM, 'G'};
-				this->_channels[2] = {10, 20, 2, DXGIPixel::UNORM, 'B'};
-				this->_channels[3] = {2,  30, 3, DXGIPixel::UNORM, 'A'};
+				this->_channels[0] = {10, 0,  0, DATATYPE::UNORM, 'R'};
+				this->_channels[1] = {10, 10, 1, DATATYPE::UNORM, 'G'};
+				this->_channels[2] = {10, 20, 2, DATATYPE::UNORM, 'B'};
+				this->_channels[3] = {2,  30, 3, DATATYPE::UNORM, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R10G10B10A2_UINT: // XMUDEC4
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {10, 0,  0, DXGIPixel::UINT, 'R'};
-				this->_channels[1] = {10, 10, 1, DXGIPixel::UINT, 'G'};
-				this->_channels[2] = {10, 20, 2, DXGIPixel::UINT, 'B'};
-				this->_channels[3] = {2,  30, 3, DXGIPixel::UINT, 'A'};
+				this->_channels[0] = {10, 0,  0, DATATYPE::UINT, 'R'};
+				this->_channels[1] = {10, 10, 1, DATATYPE::UINT, 'G'};
+				this->_channels[2] = {10, 20, 2, DATATYPE::UINT, 'B'};
+				this->_channels[3] = {2,  30, 3, DATATYPE::UINT, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R11G11B10_FLOAT: // XMFLOAT3PK
 			{
 				this->_num_channels = 3;
-				this->_channels[0] = {11, 0,  0, DXGIPixel::FLOAT, 'R'};
-				this->_channels[1] = {11, 11, 1, DXGIPixel::FLOAT, 'G'};
-				this->_channels[2] = {10, 22, 2, DXGIPixel::FLOAT, 'B'};
+				this->_channels[0] = {11, 0,  0, DATATYPE::FLOAT, 'R'};
+				this->_channels[1] = {11, 11, 1, DATATYPE::FLOAT, 'G'};
+				this->_channels[2] = {10, 22, 2, DATATYPE::FLOAT, 'B'};
 				break;
 			}
 			case DXGI_FORMAT_R8G8B8A8_TYPELESS:
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {8,  0, 0, DXGIPixel::TYPELESS, 'R'};
-				this->_channels[1] = {8,  8, 1, DXGIPixel::TYPELESS, 'G'};
-				this->_channels[2] = {8, 16, 2, DXGIPixel::TYPELESS, 'B'};
-				this->_channels[3] = {8, 24, 3, DXGIPixel::TYPELESS, 'A'};
+				this->_channels[0] = {8,  0, 0, DATATYPE::TYPELESS, 'R'};
+				this->_channels[1] = {8,  8, 1, DATATYPE::TYPELESS, 'G'};
+				this->_channels[2] = {8, 16, 2, DATATYPE::TYPELESS, 'B'};
+				this->_channels[3] = {8, 24, 3, DATATYPE::TYPELESS, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R8G8B8A8_UNORM: // XMUBYTEN4
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {8,  0, 0, DXGIPixel::UNORM, 'R'};
-				this->_channels[1] = {8,  8, 1, DXGIPixel::UNORM, 'G'};
-				this->_channels[2] = {8, 16, 2, DXGIPixel::UNORM, 'B'};
-				this->_channels[3] = {8, 24, 3, DXGIPixel::UNORM, 'A'};
+				this->_channels[0] = {8,  0, 0, DATATYPE::UNORM, 'R'};
+				this->_channels[1] = {8,  8, 1, DATATYPE::UNORM, 'G'};
+				this->_channels[2] = {8, 16, 2, DATATYPE::UNORM, 'B'};
+				this->_channels[3] = {8, 24, 3, DATATYPE::UNORM, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB: // UNSUPPORTED
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {8,  0, 0, DXGIPixel::SRGB, 'R'};
-				this->_channels[1] = {8,  8, 1, DXGIPixel::SRGB, 'G'};
-				this->_channels[2] = {8, 16, 2, DXGIPixel::SRGB, 'B'};
-				this->_channels[3] = {8, 24, 3, DXGIPixel::SRGB, 'A'};
+				this->_channels[0] = {8,  0, 0, DATATYPE::SRGB, 'R'};
+				this->_channels[1] = {8,  8, 1, DATATYPE::SRGB, 'G'};
+				this->_channels[2] = {8, 16, 2, DATATYPE::SRGB, 'B'};
+				this->_channels[3] = {8, 24, 3, DATATYPE::SRGB, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R8G8B8A8_UINT: // XMUBYTE4
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {8,  0, 0, DXGIPixel::UINT, 'R'};
-				this->_channels[1] = {8,  8, 1, DXGIPixel::UINT, 'G'};
-				this->_channels[2] = {8, 16, 2, DXGIPixel::UINT, 'B'};
-				this->_channels[3] = {8, 24, 3, DXGIPixel::UINT, 'A'};
+				this->_channels[0] = {8,  0, 0, DATATYPE::UINT, 'R'};
+				this->_channels[1] = {8,  8, 1, DATATYPE::UINT, 'G'};
+				this->_channels[2] = {8, 16, 2, DATATYPE::UINT, 'B'};
+				this->_channels[3] = {8, 24, 3, DATATYPE::UINT, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R8G8B8A8_SNORM: // XMBYTEN4
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {8,  0, 0, DXGIPixel::SNORM, 'R'};
-				this->_channels[1] = {8,  8, 1, DXGIPixel::SNORM, 'G'};
-				this->_channels[2] = {8, 16, 2, DXGIPixel::SNORM, 'B'};
-				this->_channels[3] = {8, 24, 3, DXGIPixel::SNORM, 'A'};
+				this->_channels[0] = {8,  0, 0, DATATYPE::SNORM, 'R'};
+				this->_channels[1] = {8,  8, 1, DATATYPE::SNORM, 'G'};
+				this->_channels[2] = {8, 16, 2, DATATYPE::SNORM, 'B'};
+				this->_channels[3] = {8, 24, 3, DATATYPE::SNORM, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R8G8B8A8_SINT: // XMBYTE4
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {8,  0, 0, DXGIPixel::SINT, 'R'};
-				this->_channels[1] = {8,  8, 1, DXGIPixel::SINT, 'G'};
-				this->_channels[2] = {8, 16, 2, DXGIPixel::SINT, 'B'};
-				this->_channels[3] = {8, 24, 3, DXGIPixel::SINT, 'A'};
+				this->_channels[0] = {8,  0, 0, DATATYPE::SINT, 'R'};
+				this->_channels[1] = {8,  8, 1, DATATYPE::SINT, 'G'};
+				this->_channels[2] = {8, 16, 2, DATATYPE::SINT, 'B'};
+				this->_channels[3] = {8, 24, 3, DATATYPE::SINT, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R16G16_TYPELESS:
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {16,  0, 0, DXGIPixel::TYPELESS, 'R'};
-				this->_channels[1] = {16, 16, 1, DXGIPixel::TYPELESS, 'G'};
+				this->_channels[0] = {16,  0, 0, DATATYPE::TYPELESS, 'R'};
+				this->_channels[1] = {16, 16, 1, DATATYPE::TYPELESS, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R16G16_FLOAT: // XMHALF2
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {16,  0, 0, DXGIPixel::FLOAT, 'R'};
-				this->_channels[1] = {16, 16, 1, DXGIPixel::FLOAT, 'G'};
+				this->_channels[0] = {16,  0, 0, DATATYPE::FLOAT, 'R'};
+				this->_channels[1] = {16, 16, 1, DATATYPE::FLOAT, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R16G16_UNORM: // XMUSHORTN2
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {16,  0, 0, DXGIPixel::UNORM, 'R'};
-				this->_channels[1] = {16, 16, 1, DXGIPixel::UNORM, 'G'};
+				this->_channels[0] = {16,  0, 0, DATATYPE::UNORM, 'R'};
+				this->_channels[1] = {16, 16, 1, DATATYPE::UNORM, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R16G16_UINT: // XMUSHORT2
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {16,  0, 0, DXGIPixel::UINT, 'R'};
-				this->_channels[1] = {16, 16, 1, DXGIPixel::UINT, 'G'};
+				this->_channels[0] = {16,  0, 0, DATATYPE::UINT, 'R'};
+				this->_channels[1] = {16, 16, 1, DATATYPE::UINT, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R16G16_SNORM: // XMSHORTN2
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {16,  0, 0, DXGIPixel::SNORM, 'R'};
-				this->_channels[1] = {16, 16, 1, DXGIPixel::SNORM, 'G'};
+				this->_channels[0] = {16,  0, 0, DATATYPE::SNORM, 'R'};
+				this->_channels[1] = {16, 16, 1, DATATYPE::SNORM, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R16G16_SINT: // XMSHORT2
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {16,  0, 0, DXGIPixel::SINT, 'R'};
-				this->_channels[1] = {16, 16, 1, DXGIPixel::SINT, 'G'};
+				this->_channels[0] = {16,  0, 0, DATATYPE::SINT, 'R'};
+				this->_channels[1] = {16, 16, 1, DATATYPE::SINT, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R32_TYPELESS:
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {32, 0, 0, DXGIPixel::TYPELESS, 'R'};
+				this->_channels[0] = {32, 0, 0, DATATYPE::TYPELESS, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_D32_FLOAT: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {32, 0, 0, DXGIPixel::FLOAT, 'D'};
+				this->_channels[0] = {32, 0, 0, DATATYPE::FLOAT, 'D'};
 				break;
 			}
 			case DXGI_FORMAT_R32_FLOAT: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {32, 0, 0, DXGIPixel::FLOAT, 'R'};
+				this->_channels[0] = {32, 0, 0, DATATYPE::FLOAT, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_R32_UINT: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {32, 0, 0, DXGIPixel::UINT, 'R'};
+				this->_channels[0] = {32, 0, 0, DATATYPE::UINT, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_R32_SINT: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {32, 0, 0, DXGIPixel::SINT, 'R'};
+				this->_channels[0] = {32, 0, 0, DATATYPE::SINT, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_R24G8_TYPELESS:
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {24, 0, 0, DXGIPixel::TYPELESS, 'R'};
-				this->_channels[1] = {8, 24, 1, DXGIPixel::TYPELESS, 'G'};
+				this->_channels[0] = {24, 0, 0, DATATYPE::TYPELESS, 'R'};
+				this->_channels[1] = {8, 24, 1, DATATYPE::TYPELESS, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_D24_UNORM_S8_UINT: // UNSUPPORTED
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {24, 0, 0, DXGIPixel::UNORM, 'D'};
-				this->_channels[1] = {8, 24, 1, DXGIPixel::UINT,  'S'};
+				this->_channels[0] = {24, 0, 0, DATATYPE::UNORM, 'D'};
+				this->_channels[1] = {8, 24, 1, DATATYPE::UINT,  'S'};
 				break;
 			}
 			case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {24, 0, 0, DXGIPixel::UNORM, 'R'};
+				this->_channels[0] = {24, 0, 0, DATATYPE::UNORM, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {8, 24, 1, DXGIPixel::UINT, 'G'};
+				this->_channels[0] = {8, 24, 1, DATATYPE::UINT, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R8G8_TYPELESS:
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {8, 0, 0, DXGIPixel::TYPELESS, 'R'};
-				this->_channels[1] = {8, 8, 1, DXGIPixel::TYPELESS, 'G'};
+				this->_channels[0] = {8, 0, 0, DATATYPE::TYPELESS, 'R'};
+				this->_channels[1] = {8, 8, 1, DATATYPE::TYPELESS, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R8G8_UNORM: // XMUBYTEN2
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {8, 0, 0, DXGIPixel::UNORM, 'R'};
-				this->_channels[1] = {8, 8, 1, DXGIPixel::UNORM, 'G'};
+				this->_channels[0] = {8, 0, 0, DATATYPE::UNORM, 'R'};
+				this->_channels[1] = {8, 8, 1, DATATYPE::UNORM, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R8G8_UINT: // XMUBYTE2
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {8, 0, 0, DXGIPixel::UINT, 'R'};
-				this->_channels[1] = {8, 8, 1, DXGIPixel::UINT, 'G'};
+				this->_channels[0] = {8, 0, 0, DATATYPE::UINT, 'R'};
+				this->_channels[1] = {8, 8, 1, DATATYPE::UINT, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R8G8_SNORM: // XMBYTEN2
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {8, 0, 0, DXGIPixel::SNORM, 'R'};
-				this->_channels[1] = {8, 8, 1, DXGIPixel::SNORM, 'G'};
+				this->_channels[0] = {8, 0, 0, DATATYPE::SNORM, 'R'};
+				this->_channels[1] = {8, 8, 1, DATATYPE::SNORM, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R8G8_SINT: // XMBYTE2
 			{
 				this->_num_channels = 2;
-				this->_channels[0] = {8, 0, 0, DXGIPixel::SINT, 'R'};
-				this->_channels[1] = {8, 8, 1, DXGIPixel::SINT, 'G'};
+				this->_channels[0] = {8, 0, 0, DATATYPE::SINT, 'R'};
+				this->_channels[1] = {8, 8, 1, DATATYPE::SINT, 'G'};
 				break;
 			}
 			case DXGI_FORMAT_R16_TYPELESS:
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {16, 0, 0, DXGIPixel::TYPELESS, 'R'};
+				this->_channels[0] = {16, 0, 0, DATATYPE::TYPELESS, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_R16_FLOAT: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {16, 0, 0, DXGIPixel::FLOAT, 'R'};
+				this->_channels[0] = {16, 0, 0, DATATYPE::FLOAT, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_D16_UNORM: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {16, 0, 0, DXGIPixel::UNORM, 'D'};
+				this->_channels[0] = {16, 0, 0, DATATYPE::UNORM, 'D'};
 				break;
 			}
 			case DXGI_FORMAT_R16_UNORM: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {16, 0, 0, DXGIPixel::UNORM, 'R'};
+				this->_channels[0] = {16, 0, 0, DATATYPE::UNORM, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_R16_UINT: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {16, 0, 0, DXGIPixel::UNORM, 'R'};
+				this->_channels[0] = {16, 0, 0, DATATYPE::UNORM, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_R16_SNORM: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {16, 0, 0, DXGIPixel::SNORM, 'R'};
+				this->_channels[0] = {16, 0, 0, DATATYPE::SNORM, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_R16_SINT: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {16, 0, 0, DXGIPixel::SINT, 'R'};
+				this->_channels[0] = {16, 0, 0, DATATYPE::SINT, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_R8_TYPELESS:
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {8, 0, 0, DXGIPixel::TYPELESS, 'R'};
+				this->_channels[0] = {8, 0, 0, DATATYPE::TYPELESS, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_R8_UNORM: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {8, 0, 0, DXGIPixel::UNORM, 'R'};
+				this->_channels[0] = {8, 0, 0, DATATYPE::UNORM, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_R8_UINT: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {8, 0, 0, DXGIPixel::UINT, 'R'};
+				this->_channels[0] = {8, 0, 0, DATATYPE::UINT, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_R8_SNORM: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {8, 0, 0, DXGIPixel::SNORM, 'R'};
+				this->_channels[0] = {8, 0, 0, DATATYPE::SNORM, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_R8_SINT: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {8, 0, 0, DXGIPixel::SINT, 'R'};
+				this->_channels[0] = {8, 0, 0, DATATYPE::SINT, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_A8_UNORM: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {8, 0, 0, DXGIPixel::UNORM, 'A'};
+				this->_channels[0] = {8, 0, 0, DATATYPE::UNORM, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_R1_UNORM: // UNSUPPORTED
 			{
 				this->_num_channels = 1;
-				this->_channels[0] = {1, 0, 0, DXGIPixel::UNORM, 'R'};
+				this->_channels[0] = {1, 0, 0, DATATYPE::UNORM, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_R9G9B9E5_SHAREDEXP: // XMFLOAT3SE
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {9,  0, 0, DXGIPixel::SHAREDEXP, 'R'};
-				this->_channels[1] = {9,  9, 1, DXGIPixel::SHAREDEXP, 'G'};
-				this->_channels[2] = {9, 18, 2, DXGIPixel::SHAREDEXP, 'B'};
-				this->_channels[3] = {5, 27, 3, DXGIPixel::SHAREDEXP, 'E'};
+				this->_channels[0] = {9,  0, 0, DATATYPE::SHAREDEXP, 'R'};
+				this->_channels[1] = {9,  9, 1, DATATYPE::SHAREDEXP, 'G'};
+				this->_channels[2] = {9, 18, 2, DATATYPE::SHAREDEXP, 'B'};
+				this->_channels[3] = {5, 27, 3, DATATYPE::SHAREDEXP, 'E'};
 				break;
 			}
 			case DXGI_FORMAT_B5G6R5_UNORM: // XMU565
 			{
 				this->_num_channels = 3;
-				this->_channels[0] = {5,  0, 2, DXGIPixel::UNORM, 'B'};
-				this->_channels[1] = {6,  5, 1, DXGIPixel::UNORM, 'G'};
-				this->_channels[2] = {5, 11, 0, DXGIPixel::UNORM, 'R'};
+				this->_channels[0] = {5,  0, 2, DATATYPE::UNORM, 'B'};
+				this->_channels[1] = {6,  5, 1, DATATYPE::UNORM, 'G'};
+				this->_channels[2] = {5, 11, 0, DATATYPE::UNORM, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_B5G5R5A1_UNORM: // XMU555
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {5,  0, 2, DXGIPixel::UNORM, 'B'};
-				this->_channels[1] = {5,  5, 1, DXGIPixel::UNORM, 'G'};
-				this->_channels[2] = {5, 10, 0, DXGIPixel::UNORM, 'R'};
-				this->_channels[3] = {1, 15, 3, DXGIPixel::UNORM, 'A'};
+				this->_channels[0] = {5,  0, 2, DATATYPE::UNORM, 'B'};
+				this->_channels[1] = {5,  5, 1, DATATYPE::UNORM, 'G'};
+				this->_channels[2] = {5, 10, 0, DATATYPE::UNORM, 'R'};
+				this->_channels[3] = {1, 15, 3, DATATYPE::UNORM, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_B8G8R8A8_UNORM: // XMCOLOR
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {8,  0, 2, DXGIPixel::UNORM, 'B'};
-				this->_channels[1] = {8,  8, 1, DXGIPixel::UNORM, 'G'};
-				this->_channels[2] = {8, 16, 0, DXGIPixel::UNORM, 'R'};
-				this->_channels[3] = {8, 24, 3, DXGIPixel::UNORM, 'A'};
+				this->_channels[0] = {8,  0, 2, DATATYPE::UNORM, 'B'};
+				this->_channels[1] = {8,  8, 1, DATATYPE::UNORM, 'G'};
+				this->_channels[2] = {8, 16, 0, DATATYPE::UNORM, 'R'};
+				this->_channels[3] = {8, 24, 3, DATATYPE::UNORM, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_B8G8R8X8_UNORM: // XMCOLOR
 			{
 				this->_num_channels = 3;
-				this->_channels[0] = {8,  0, 2, DXGIPixel::UNORM, 'B'};
-				this->_channels[1] = {8,  8, 1, DXGIPixel::UNORM, 'G'};
-				this->_channels[2] = {8, 16, 0, DXGIPixel::UNORM, 'R'};
+				this->_channels[0] = {8,  0, 2, DATATYPE::UNORM, 'B'};
+				this->_channels[1] = {8,  8, 1, DATATYPE::UNORM, 'G'};
+				this->_channels[2] = {8, 16, 0, DATATYPE::UNORM, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM: // XMUBYTEN4 and use XMLoadUDecN4_XR and XMStoreUDecN4_XR
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {10,  0, 0, DXGIPixel::XR_BIAS, 'R'};
-				this->_channels[1] = {10, 10, 1, DXGIPixel::XR_BIAS, 'G'};
-				this->_channels[2] = {10, 20, 2, DXGIPixel::XR_BIAS, 'B'};
-				this->_channels[3] = { 2, 30, 3, DXGIPixel::UNORM,   'A'};
+				this->_channels[0] = {10,  0, 0, DATATYPE::XR_BIAS, 'R'};
+				this->_channels[1] = {10, 10, 1, DATATYPE::XR_BIAS, 'G'};
+				this->_channels[2] = {10, 20, 2, DATATYPE::XR_BIAS, 'B'};
+				this->_channels[3] = { 2, 30, 3, DATATYPE::UNORM,   'A'};
 				break;
 			}
 			case DXGI_FORMAT_B8G8R8A8_TYPELESS:
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {8,  0, 2, DXGIPixel::TYPELESS, 'B'};
-				this->_channels[1] = {8,  8, 1, DXGIPixel::TYPELESS, 'G'};
-				this->_channels[2] = {8, 16, 0, DXGIPixel::TYPELESS, 'R'};
-				this->_channels[3] = {8, 24, 3, DXGIPixel::TYPELESS, 'A'};
+				this->_channels[0] = {8,  0, 2, DATATYPE::TYPELESS, 'B'};
+				this->_channels[1] = {8,  8, 1, DATATYPE::TYPELESS, 'G'};
+				this->_channels[2] = {8, 16, 0, DATATYPE::TYPELESS, 'R'};
+				this->_channels[3] = {8, 24, 3, DATATYPE::TYPELESS, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB: // UNSUPPORTED
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {8,  0, 2, DXGIPixel::SRGB, 'B'};
-				this->_channels[1] = {8,  8, 1, DXGIPixel::SRGB, 'G'};
-				this->_channels[2] = {8, 16, 0, DXGIPixel::SRGB, 'R'};
-				this->_channels[3] = {8, 24, 3, DXGIPixel::SRGB, 'A'};
+				this->_channels[0] = {8,  0, 2, DATATYPE::SRGB, 'B'};
+				this->_channels[1] = {8,  8, 1, DATATYPE::SRGB, 'G'};
+				this->_channels[2] = {8, 16, 0, DATATYPE::SRGB, 'R'};
+				this->_channels[3] = {8, 24, 3, DATATYPE::SRGB, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_B8G8R8X8_TYPELESS:
 			{
 				this->_num_channels = 3;
-				this->_channels[0] = {8,  0, 2, DXGIPixel::TYPELESS, 'B'};
-				this->_channels[1] = {8,  8, 1, DXGIPixel::TYPELESS, 'G'};
-				this->_channels[2] = {8, 16, 0, DXGIPixel::TYPELESS, 'R'};
+				this->_channels[0] = {8,  0, 2, DATATYPE::TYPELESS, 'B'};
+				this->_channels[1] = {8,  8, 1, DATATYPE::TYPELESS, 'G'};
+				this->_channels[2] = {8, 16, 0, DATATYPE::TYPELESS, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB: // UNSUPPORTED
 			{
 				this->_num_channels = 3;
-				this->_channels[0] = {8,  0, 2, DXGIPixel::SRGB, 'B'};
-				this->_channels[1] = {8,  8, 1, DXGIPixel::SRGB, 'G'};
-				this->_channels[2] = {8, 16, 0, DXGIPixel::SRGB, 'R'};
+				this->_channels[0] = {8,  0, 2, DATATYPE::SRGB, 'B'};
+				this->_channels[1] = {8,  8, 1, DATATYPE::SRGB, 'G'};
+				this->_channels[2] = {8, 16, 0, DATATYPE::SRGB, 'R'};
 				break;
 			}
 			case DXGI_FORMAT_B4G4R4A4_UNORM: // XMUNIBBLE4
 			{
 				this->_num_channels = 4;
-				this->_channels[0] = {4,  0, 2, DXGIPixel::UNORM, 'B'};
-				this->_channels[1] = {4,  4, 1, DXGIPixel::UNORM, 'G'};
-				this->_channels[2] = {4,  8, 0, DXGIPixel::UNORM, 'R'};
-				this->_channels[3] = {4, 12, 3, DXGIPixel::UNORM, 'A'};
+				this->_channels[0] = {4,  0, 2, DATATYPE::UNORM, 'B'};
+				this->_channels[1] = {4,  4, 1, DATATYPE::UNORM, 'G'};
+				this->_channels[2] = {4,  8, 0, DATATYPE::UNORM, 'R'};
+				this->_channels[3] = {4, 12, 3, DATATYPE::UNORM, 'A'};
 				break;
 			}
 			case DXGI_FORMAT_BC1_TYPELESS:               /* COMPRESSED */
@@ -689,7 +688,7 @@ namespace DXTMEX
 				                        MEU_SEVERITY_INTERNAL,
 				                        "UnsupportedFormatError",
 				                        "Unsupported format '%s' is not supported for this operation.",
-				                        GetFormatStringFromID(fmt).c_str());
+				                        g_format_map.FindStringFromID(fmt).c_str());
 			}
 		}
 
@@ -722,55 +721,6 @@ namespace DXTMEX
 		}
 	}
 
-	void DXGIPixel::InsertChannels(const size_t* dims, size_t num_dims, void* data, bool input_is_typeless)
-	{
-
-		/* options: 
-		 * input is linear/srgb
-		 * raw copy
-		 * 
-		 * if SRGB then must be mxUint8, mxUint16, mxUint32, Single, or Double
-		 * 
-		 * by default:
-		 * mxUint8  => DXGI_FORMAT_R8G8B8A8_UNORM_SRGB or DXGI_FORMAT_R8G8B8X8_UNORM_SRGB (direct no-op conversion)
-		 * mxUint16 => FLOAT [0.0, 1.0] => DXGI_FORMAT_R16G16B16A16_UNORM
-		 * mxUint32 => FLOAT [0.0, 1.0] => DXGI_FORMAT_R32G32B32A32_UNORM
-		 * 
-		 * mxInt8   => FLOAT [-1.0, 1.0] => DXGI_FORMAT_R8G8B8A8_SNORM
-		 * mxInt16  => FLOAT [-1.0, 1.0] => DXGI_FORMAT_R16G16B16A16_SNORM
-		 * mxInt32  => FLOAT [-1.0, 1.0] => DXGI_FORMAT_R32G32B32A32_SNORM
-		 * 
-		 * mxSingle => FLOAT [0.0, 1.0] => DXGI_FORMAT_R32G32B32A32_FLOAT
-		 * mxDouble => FLOAT [0.0, 1.0] => DXGI_FORMAT_R32G32B32A32_FLOAT (loss of precision)
-		 * 
-		 * if linear:
-		 * mxUint8  => DXGI_FORMAT_R8G8B8A8_UNORM
-		 * mxUint16 => DXGI_FORMAT_R16G16B16A16_UNORM
-		 * mxUint32 => DXGI_FORMAT_R32G32B32A32_UNORM
-		 * 
-		 * mxInt8   => DXGI_FORMAT_R8G8B8A8_SNORM
-		 * mxInt16  => DXGI_FORMAT_R16G16B16A16_SNORM
-		 * mxInt32  => DXGI_FORMAT_R32G32B32A32_SNORM
-		 * 
-		 * mxSingle => DXGI_FORMAT_R32G32B32A32_FLOAT
-		 * mxDouble => DXGI_FORMAT_R32G32B32A32_FLOAT (loss of precision)
-		 */ 
-
-		if(num_dims < 3 || dims[2] == 1)
-		{
-			/* copy data throughout */
-		}
-		else
-		{
-			if(dims[2] != this->_num_channels)
-			{
-				MEXError::PrintMexError(MEU_FL,
-					MEU_SEVERITY_USER,
-					"NumChannelsError",
-					"The size of the third dimension does not equal the number of channels specified by the format.");
-			}
-		}
-	}
 	
 	void DXGIPixel::ExtractChannels(const size_t* ch_idx, const size_t* out_idx, size_t num_idx, mxArray*& out, mxClassID out_class)
 	{
@@ -886,7 +836,7 @@ namespace DXTMEX
 					                        out_class);
 				}
 			}
-			storage_function = DXGIPixel::GetStorageFunction(input_datatype, out_class);
+			storage_function = GetStorageFunction(input_datatype, out_class);
 		}
 		else
 		{
@@ -894,31 +844,68 @@ namespace DXTMEX
 			 * Try to do this losslessly unless otherwise specified. */
 			switch(input_datatype)
 			{
-				case DXGIPixel::SNORM:
+				case DATATYPE::SNORM:
 				{
-					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SNORM, mxSingle>::StoreMX;
+					size_t max_width = DirectX::BitsPerColor(this->_format);
+
+					/* determine MATLAB class width */
+					if(max_width <= 8)
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxINT8_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::SNORM, mxInt8>::StoreMX;
+					}
+					else if(max_width <= 16)
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxINT16_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::SNORM, mxInt16>::StoreMX;
+					}
+					else
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxINT32_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::SNORM, mxInt32>::StoreMX;
+					}
 					break;
 				}
-				case DXGIPixel::UNORM:
+				case DATATYPE::UNORM:
 				{
-					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UNORM, mxSingle>::StoreMX;
+					size_t max_width = DirectX::BitsPerColor(this->_format);
+
+					/* determine MATLAB class width */
+					if(max_width == 1)
+					{
+						out = mxCreateLogicalArray(ndim, out_dims);
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::UNORM, mxLogical>::StoreMX;
+					}
+					else if(max_width <= 8)
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxUINT8_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::UNORM, mxUint8>::StoreMX;
+					}
+					else if(max_width <= 16)
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxUINT16_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::UNORM, mxUint16>::StoreMX;
+					}
+					else
+					{
+						out = mxCreateNumericArray(ndim, out_dims, mxUINT32_CLASS, mxREAL);
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::UNORM, mxUint32>::StoreMX;
+					}
 					break;
 				}
-				case DXGIPixel::FLOAT:
+				case DATATYPE::FLOAT:
 				{
 					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::FLOAT, mxSingle>::StoreMX;
+					storage_function = &DXGIPixel::ChannelElement<DATATYPE::FLOAT, mxSingle>::StoreMX;
 					break;
 				}
-				case DXGIPixel::SRGB:
+				case DATATYPE::SRGB:
 				{
-					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SRGB, mxSingle>::StoreMX;
+					out = mxCreateNumericArray(ndim, out_dims, mxUINT8_CLASS, mxREAL);
+					storage_function = &DXGIPixel::ChannelElement<DATATYPE::SRGB, mxUint8>::StoreMX;
 					break;
 				}
-				case DXGIPixel::SHAREDEXP:
+				case DATATYPE::SHAREDEXP:
 				{
 					/* special case */
 					
@@ -956,42 +943,42 @@ namespace DXTMEX
 					 * The mantissa is NOT offset by 1.
 					 */
 					float scalar;
-					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels(); src_idx++)
+					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels; src_idx++)
 					{
 						uint32_t pixel_data = *(pixels + src_idx);
 						int32_t exp_bits = (pixel_data & SHAREDEXP_E_MASK) >> 27u;
 						if(exp_bits == 0)
 						{
 							/* this format has denorm support */
-							scalar = std::pow(2.0f, 1 - SHAREDEXP_BIAS);
+							scalar = (float)std::pow(2.0f, 1 - SHAREDEXP_BIAS);
 						}
 						else
 						{
-							scalar = std::pow(2.0f, exp_bits - SHAREDEXP_BIAS);
+							scalar = (float)std::pow(2.0f, exp_bits - SHAREDEXP_BIAS);
 						}
 						
 						for(j = 0; j < num_idx; j++)
 						{
 							if(ch_idx[src_idx] != 3)
 							{
-								data[dst_idx + out_idx[j]*this->_num_pixels()] = ((pixel_data & masks[ch_idx[j]]) >> this->_channels[ch_idx[j]].offset)*scalar;
+								data[dst_idx + out_idx[j]*this->_num_pixels] = ((pixel_data & masks[ch_idx[j]]) >> this->_channels[ch_idx[j]].offset)*scalar;
 							}
 						}
 						dst_idx += this->_image->height;
-						if(dst_idx >= this->_num_pixels())
+						if(dst_idx >= this->_num_pixels)
 						{
 							dst_idx = src_idx / this->_image->width;
 						}
 					}
 					return; // EARLY RETURN
 				}
-				case DXGIPixel::XR_BIAS:
+				case DATATYPE::XR_BIAS:
 				{
 					out = mxCreateNumericArray(ndim, out_dims, mxSINGLE_CLASS, mxREAL);
-					storage_function = &DXGIPixel::ChannelElement<DXGIPixel::XR_BIAS, mxSingle>::StoreMX;
+					storage_function = &DXGIPixel::ChannelElement<DATATYPE::XR_BIAS, mxSingle>::StoreMX;
 					break;
 				}
-				case DXGIPixel::SINT:
+				case DATATYPE::SINT:
 				{
 					/* Keep max width consistent with max channel width
 					 * even if we don't select the max channel. This is
@@ -1003,26 +990,26 @@ namespace DXTMEX
 					if(max_width == 1)
 					{
 						out = mxCreateLogicalArray(ndim, out_dims);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxLogical>::StoreMX;
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::SINT, mxLogical>::StoreMX;
 					}
 					else if(max_width <= 8)
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxINT8_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt8>::StoreMX;
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::SINT, mxInt8>::StoreMX;
 					}
 					else if(max_width <= 16)
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxINT16_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt16>::StoreMX;
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::SINT, mxInt16>::StoreMX;
 					}
 					else
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxINT32_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::SINT, mxInt32>::StoreMX;
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::SINT, mxInt32>::StoreMX;
 					}
 					break;
 				}
-				case DXGIPixel::UINT:
+				case DATATYPE::UINT:
 				{
 					size_t max_width = DirectX::BitsPerColor(this->_format);
 					
@@ -1030,26 +1017,26 @@ namespace DXTMEX
 					if(max_width == 1)
 					{
 						out = mxCreateLogicalArray(ndim, out_dims);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxLogical>::StoreMX;
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::UINT, mxLogical>::StoreMX;
 					}
 					else if(max_width <= 8)
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxUINT8_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint8>::StoreMX;
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::UINT, mxUint8>::StoreMX;
 					}
 					else if(max_width <= 16)
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxUINT16_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint16>::StoreMX;
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::UINT, mxUint16>::StoreMX;
 					}
 					else
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxUINT32_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::UINT, mxUint32>::StoreMX;
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::UINT, mxUint32>::StoreMX;
 					}
 					break;
 				}
-				case DXGIPixel::TYPELESS:
+				case DATATYPE::TYPELESS:
 				{
 					size_t max_width = DirectX::BitsPerColor(this->_format);
 					
@@ -1057,22 +1044,22 @@ namespace DXTMEX
 					if(max_width == 1)
 					{
 						out = mxCreateLogicalArray(ndim, out_dims);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxLogical>::StoreMX;
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::TYPELESS, mxLogical>::StoreMX;
 					}
 					else if(max_width <= 8)
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxUINT8_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint8>::StoreMX;
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::TYPELESS, mxUint8>::StoreMX;
 					}
 					else if(max_width <= 16)
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxUINT16_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint16>::StoreMX;
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::TYPELESS, mxUint16>::StoreMX;
 					}
 					else
 					{
 						out = mxCreateNumericArray(ndim, out_dims, mxUINT32_CLASS, mxREAL);
-						storage_function = &DXGIPixel::ChannelElement<DXGIPixel::TYPELESS, mxUint32>::StoreMX;
+						storage_function = &DXGIPixel::ChannelElement<DATATYPE::TYPELESS, mxUint32>::StoreMX;
 					}
 					break;
 				}
@@ -1130,19 +1117,18 @@ namespace DXTMEX
 				else
 				{
 					ChannelExtractor<uint64_t> extractor(reinterpret_cast<uint64_t*>(this->_image->pixels), this->_channels, this->_num_channels);
-					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels(); src_idx++)
+					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels; src_idx++, dst_idx += this->_image->height)
 					{
+						if(dst_idx >= this->_num_pixels)
+						{
+							dst_idx = src_idx / this->_image->width;
+						}
 						for(j = 0; j < num_idx; j++)
 						{
 							storage_function(data, 
-										  dst_idx + out_idx[j] * this->_num_pixels(), 
+										  dst_idx + out_idx[j] * this->_num_pixels, 
 										  extractor.Extract(src_idx, ch_idx[j]),
 										  this->_channels[ch_idx[j]].width);
-						}
-						dst_idx += this->_image->height;
-						if(dst_idx >= this->_num_pixels())
-						{
-							dst_idx = src_idx / this->_image->width;
 						}
 					}
 				}
@@ -1182,19 +1168,18 @@ namespace DXTMEX
 				else
 				{
 					ChannelExtractor<uint32_t> extractor(reinterpret_cast<uint32_t*>(this->_image->pixels), this->_channels, this->_num_channels);
-					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels(); src_idx++)
+					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels; src_idx++, dst_idx += this->_image->height)
 					{
+						if(dst_idx >= this->_num_pixels)
+						{
+							dst_idx = src_idx / this->_image->width;
+						}
 						for(j = 0; j < num_idx; j++)
 						{
 							storage_function(data, 
-										  dst_idx + out_idx[j] * this->_num_pixels(), 
+										  dst_idx + out_idx[j] * this->_num_pixels, 
 										  extractor.Extract(src_idx, ch_idx[j]),
 										  this->_channels[ch_idx[j]].width);
-						}
-						dst_idx += this->_image->height;
-						if(dst_idx >= this->_num_pixels())
-						{
-							dst_idx = src_idx / this->_image->width;
 						}
 					}
 				}
@@ -1228,19 +1213,18 @@ namespace DXTMEX
 				else
 				{
 					ChannelExtractor<uint16_t> extractor(reinterpret_cast<uint16_t*>(this->_image->pixels), this->_channels, this->_num_channels);
-					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels(); src_idx++)
+					for(src_idx = 0, dst_idx = 0; src_idx < this->_num_pixels; src_idx++, dst_idx += this->_image->height)
 					{
+						if(dst_idx >= this->_num_pixels)
+						{
+							dst_idx = src_idx / this->_image->width;
+						}
 						for(j = 0; j < num_idx; j++)
 						{
 							storage_function(data, 
-										  dst_idx + out_idx[j] * this->_num_pixels(), 
+										  dst_idx + out_idx[j] * this->_num_pixels, 
 										  extractor.Extract(src_idx, ch_idx[j]),
 										  this->_channels[ch_idx[j]].width);
-						}
-						dst_idx += this->_image->height;
-						if(dst_idx >= this->_num_pixels())
-						{
-							dst_idx = src_idx / this->_image->width;
 						}
 					}
 				}
@@ -1289,18 +1273,17 @@ namespace DXTMEX
 					for(j = 0; j < this->_image->rowPitch / 4; j++)
 					{
 						uint32_t page = pixels32[j];
-						for(k = 32; k > 0; k--, src_idx++)
+						for(k = 32; k > 0; k--, src_idx++, dst_idx += this->_image->height)
 						{
+							if(dst_idx >= this->_num_pixels)
+							{
+								dst_idx = src_idx / this->_image->width;
+							}
 							/* there should only be one channel, but it may be repeatedly stored */
 							channel_data = ((page >> (k - 1)) & 1u) != 0;
 							for(l = 0; l < num_idx; l++)
 							{
-								data_l[dst_idx + out_idx[l] * this->_num_pixels()] = channel_data;
-							}
-							dst_idx += this->_image->height;
-							if(dst_idx >= this->_num_pixels())
-							{
-								dst_idx = src_idx / this->_image->width;
+								data_l[dst_idx + out_idx[l] * this->_num_pixels] = channel_data;
 							}
 						}
 					}
@@ -1308,34 +1291,33 @@ namespace DXTMEX
 					for(j *= 4; j < this->_image->rowPitch - 1; j++)
 					{
 						uint8_t page = pixels8[j];
-						for(k = 8; k > 0; k--, src_idx++)
+						for(k = 8; k > 0; k--, src_idx++, dst_idx += this->_image->height)
 						{
+							if(dst_idx >= this->_num_pixels)
+							{
+								dst_idx = src_idx / this->_image->width;
+							}
 							/* there should only be one channel, but it may be repeatedly stored */
 							channel_data = ((uint8_t)(page >> (k - 1)) & 1u) != 0;
 							for(l = 0; l < num_idx; l++)
 							{
-								data_l[dst_idx + out_idx[l] * this->_num_pixels()] = channel_data;
-							}
-							dst_idx += this->_image->height;
-							if(dst_idx >= this->_num_pixels())
-							{
-								dst_idx = src_idx / this->_image->width;
+								data_l[dst_idx + out_idx[l] * this->_num_pixels] = channel_data;
 							}
 						}
 					}
 					uint8_t page = pixels8[j];
-					for(k = this->_image->width - ((this->_image->rowPitch - 1) * 8); k > 0; k--, src_idx++)
+					for(k = this->_image->width - ((this->_image->rowPitch - 1) * 8); k > 0; k--, src_idx++, dst_idx += this->_image->height)
 					{
+						if(dst_idx >= this->_num_pixels)
+						{
+							dst_idx = src_idx / this->_image->width;
+						}
+
 						/* there should only be one channel, but it may be repeatedly stored */
 						channel_data = ((uint8_t)(page >> (k - 1)) & 1u) != 0;
 						for(l = 0; l < num_idx; l++)
 						{
-							data_l[dst_idx + out_idx[l] * this->_num_pixels()] = channel_data;
-						}
-						dst_idx += this->_image->height;
-						if(dst_idx >= this->_num_pixels())
-						{
-							dst_idx = src_idx / this->_image->width;
+							data_l[dst_idx + out_idx[l] * this->_num_pixels] = channel_data;
 						}
 					}
 				}
@@ -1423,48 +1405,28 @@ namespace DXTMEX
 	void DXGIPixel::ExtractAll(mxArray*& mx_out)
 	{
 		size_t ch_idx[MAX_CHANNELS];
-		size_t out_idx[MAX_CHANNELS];
 		for (size_t i = 0; i < this->_num_channels; i++)
 		{
 			ch_idx[i] = i;
 		}
 		this->ExtractChannels(ch_idx, ch_idx, this->_num_channels, mx_out);
 	}
+
 	
-	DXGIPixel::StorageFunction DXGIPixel::GetStorageFunction(const DXGIPixel::DATATYPE in_type, mxClassID out_type)
+	
+	DXGIPixel::StorageFunction DXGIPixel::GetStorageFunction(const DATATYPE in_type, mxClassID out_type)
 	{
-#define STORAGE_FUNCTION_SWITCH(IN_TYPE, OUT_TYPE) \
-switch(OUT_TYPE) \
-{ \
-	case mxINT8_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE,  mxInt8>::StoreMX;            \
-	case mxINT16_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxInt16>::StoreMX;           \
-	case mxINT32_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxInt32>::StoreMX;           \
-	case mxUINT8_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxUint8>::StoreMX;           \
-	case mxUINT16_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxUint16>::StoreMX;         \
-	case mxUINT32_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxUint32>::StoreMX;         \
-	case mxSINGLE_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxSingle>::StoreMX;         \
-	case mxDOUBLE_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxDouble>::StoreMX;         \
-	case mxLOGICAL_CLASS: return &DXGIPixel::ChannelElement<IN_TYPE, mxLogical>::StoreMX;       \
-	default:                                                                                  \
-	{                                                                                         \
-		MEXError::PrintMexError(MEU_FL,                                                      \
-						    MEU_SEVERITY_INTERNAL,                                       \
-						    "UnexpectedOutputTypeError",                                 \
-						    "Unexpected datatype requested for output (%u).",            \
-						    OUT_TYPE);                                                   \
-	}                                                                                         \
-}
 		switch(in_type)
 		{
-			case DXGIPixel::TYPELESS:  STORAGE_FUNCTION_SWITCH(DXGIPixel::TYPELESS, out_type)
-			case DXGIPixel::SNORM:     STORAGE_FUNCTION_SWITCH(DXGIPixel::SNORM, out_type)
-			case DXGIPixel::UNORM:     STORAGE_FUNCTION_SWITCH(DXGIPixel::UNORM, out_type)
-			case DXGIPixel::SINT:      STORAGE_FUNCTION_SWITCH(DXGIPixel::SINT, out_type)
-			case DXGIPixel::UINT:      STORAGE_FUNCTION_SWITCH(DXGIPixel::UINT, out_type)
-			case DXGIPixel::FLOAT:     STORAGE_FUNCTION_SWITCH(DXGIPixel::FLOAT, out_type)
-			case DXGIPixel::SRGB:      STORAGE_FUNCTION_SWITCH(DXGIPixel::SRGB, out_type)
-			case DXGIPixel::SHAREDEXP: STORAGE_FUNCTION_SWITCH(DXGIPixel::SHAREDEXP, out_type)
-			case DXGIPixel::XR_BIAS:   STORAGE_FUNCTION_SWITCH(DXGIPixel::XR_BIAS, out_type)
+			case DATATYPE::TYPELESS: return GetStorageFunction<DATATYPE::TYPELESS>(out_type);
+			case DATATYPE::SNORM: return GetStorageFunction<DATATYPE::SNORM>(out_type);
+			case DATATYPE::UNORM: return GetStorageFunction<DATATYPE::UNORM>(out_type);
+			case DATATYPE::SINT: return GetStorageFunction<DATATYPE::SINT>(out_type);
+			case DATATYPE::UINT: return GetStorageFunction<DATATYPE::UINT>(out_type);
+			case DATATYPE::FLOAT: return GetStorageFunction<DATATYPE::FLOAT>(out_type);
+			case DATATYPE::SRGB: return GetStorageFunction<DATATYPE::SRGB>(out_type);
+			case DATATYPE::SHAREDEXP: return GetStorageFunction<DATATYPE::SHAREDEXP>(out_type);
+			case DATATYPE::XR_BIAS: return GetStorageFunction<DATATYPE::XR_BIAS>(out_type);
 			default:
 			{
 				MEXError::PrintMexError(MEU_FL,
@@ -1476,6 +1438,30 @@ switch(OUT_TYPE) \
 		}
 		return nullptr;
 	}
-	
-}
+
+	template <DXGIPixel::DATATYPE IN_TYPE>
+	DXGIPixel::StorageFunction DXGIPixel::GetStorageFunction(mxClassID out_type)
+	{
+		switch (out_type)
+		{
+			case mxINT8_CLASS:    return &ChannelElement<IN_TYPE, mxInt8>::StoreMX;
+			case mxINT16_CLASS:   return &ChannelElement<IN_TYPE, mxInt16>::StoreMX;
+			case mxINT32_CLASS:   return &ChannelElement<IN_TYPE, mxInt32>::StoreMX;
+			case mxUINT8_CLASS:   return &ChannelElement<IN_TYPE, mxUint8>::StoreMX;
+			case mxUINT16_CLASS:  return &ChannelElement<IN_TYPE, mxUint16>::StoreMX;
+			case mxUINT32_CLASS:  return &ChannelElement<IN_TYPE, mxUint32>::StoreMX;
+			case mxSINGLE_CLASS:  return &ChannelElement<IN_TYPE, mxSingle>::StoreMX;
+			case mxDOUBLE_CLASS:  return &ChannelElement<IN_TYPE, mxDouble>::StoreMX;
+			case mxLOGICAL_CLASS: return &ChannelElement<IN_TYPE, mxLogical>::StoreMX;
+			default:
+			{ 
+				MEXError::PrintMexError(MEU_FL,
+					MEU_SEVERITY_INTERNAL,
+					"UnexpectedOutputTypeError",
+					"Unexpected datatype requested for output (%u).",
+					out_type);
+			}
+		}
+		return nullptr;
+	}
 

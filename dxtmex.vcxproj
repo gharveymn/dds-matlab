@@ -69,7 +69,7 @@
     <OutDir>$(SolutionDir)out\private\</OutDir>
     <EmbedManifest>false</EmbedManifest>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <IntDir>$(OutDir)Build\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(OutDir)build\$(Platform)\$(Configuration)\</IntDir>
     <MatlabRoot>C:\Program Files\MATLAB\R2019a\</MatlabRoot>
     <Matlab_IncludePath>$(MatlabRoot)extern\include\;$(MatlabRoot)simulink\include\</Matlab_IncludePath>
     <Matlab_PreprocessorDefinitions>MATLAB_MEXCMD_RELEASE=R2017b;MX_COMPAT_64;USE_MEX_CMD;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;_SECURE_SCL=0;MATLAB_MEX_FILE</Matlab_PreprocessorDefinitions>
@@ -89,7 +89,7 @@
     <OutDir>$(SolutionDir)out\private\</OutDir>
     <EmbedManifest>false</EmbedManifest>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <IntDir>$(OutDir)Build\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(OutDir)build\$(Platform)\$(Configuration)\</IntDir>
     <MatlabRoot>C:\Program Files\MATLAB\R2019a\</MatlabRoot>
     <Matlab_IncludePath>$(MatlabRoot)extern\include\;$(MatlabRoot)simulink\include\</Matlab_IncludePath>
     <Matlab_PreprocessorDefinitions>MATLAB_MEXCMD_RELEASE=R2017b;MX_COMPAT_64;USE_MEX_CMD;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;_SECURE_SCL=0;MATLAB_MEX_FILE</Matlab_PreprocessorDefinitions>
@@ -175,7 +175,7 @@
       <OmitFramePointers>false</OmitFramePointers>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>NotSet</SubSystem>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>$(ProjectDir)source\lib\DirectXTex\DirectXTex\Bin\Desktop_2017\x64\Release;$(Matlab_LibraryPath);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -245,6 +245,7 @@
     <ClCompile Include="source\src\dxtmex_pixel.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\src\dxtmex_dxtimage.hpp" />
     <ClInclude Include="source\src\dxtmex_dxtimagearray.hpp" />
     <ClInclude Include="source\src\dxtmex_flags.hpp" />
     <ClInclude Include="source\src\dxtmex_maps.hpp" />

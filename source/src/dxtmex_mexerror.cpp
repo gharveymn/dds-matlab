@@ -29,6 +29,7 @@ HRESULT hres = 0;
 #define MEU_SEVERITY_SYSTEM_STRING "[SYSTEM]"
 #define MEU_SEVERITY_CORRUPTION_STRING "[CORRUPTION]"
 #define MEU_SEVERITY_FATAL_STRING "[FATAL]"
+#define MEU_SEVERITY_HRESULT_STRING "[HRESULT]"
 
 #define MEU_LIBRARY_NAME_SIZE 31
 #define MEU_ID_SIZE 95
@@ -84,6 +85,12 @@ namespace
 		{
 			strcpy(buffer_iter, MEU_SEVERITY_SYSTEM_STRING);
 			buffer_iter += strlen(MEU_SEVERITY_SYSTEM_STRING);
+		}
+
+		if(error_severity & MEU_SEVERITY_HRESULT)
+		{
+			strcpy(buffer_iter, MEU_SEVERITY_HRESULT_STRING);
+			buffer_iter += strlen(MEU_SEVERITY_HRESULT_STRING);
 		}
 
 		if(error_severity & MEU_SEVERITY_CORRUPTION)
